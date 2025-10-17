@@ -1,29 +1,47 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { X, Check } from "lucide-react";
 import { FinalProductView } from "./FinalProductView";
+import { ANIMATION, IMAGES, ALT_TEXT } from "@/constants";
+import type { BedroomItemId } from "@/types";
+
+const BEDROOM_ITEMS: readonly BedroomItemId[] = [
+  "bedroom1",
+  "bedroom2",
+] as const;
 
 export function ItemSelectionView() {
-  const [currentItem, setCurrentItem] = useState<"item1" | "item2">("item1");
-  const [showFinalView, setShowFinalView] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
+  const [showFinalView, setShowFinalView] = useState<boolean>(false);
 
-  const handleReject = () => {
-    if (currentItem === "item1") {
-      setCurrentItem("item2");
-    } else if (currentItem === "item2") {
+  const currentItem = BEDROOM_ITEMS[currentItemIndex];
+  const isLastItem = currentItemIndex === BEDROOM_ITEMS.length - 1;
+
+  const imageSrc = useMemo(() => {
+    return currentItem === "bedroom1" ? IMAGES.BEDROOM_ONE : IMAGES.BEDROOM_TWO;
+  }, [currentItem]);
+
+  const imageAlt = useMemo(() => {
+    return currentItem === "bedroom1"
+      ? ALT_TEXT.BEDROOM_ONE
+      : ALT_TEXT.BEDROOM_TWO;
+  }, [currentItem]);
+
+  const handleNext = useCallback((): void => {
+    if (isLastItem) {
       setShowFinalView(true);
+    } else {
+      setCurrentItemIndex((prev) => prev + 1);
     }
-  };
+  }, [isLastItem]);
 
-  const handleAccept = () => {
-    if (currentItem === "item1") {
-      setCurrentItem("item2");
-    } else if (currentItem === "item2") {
-      setShowFinalView(true);
-    }
-  };
+  const handleReject = useCallback((): void => {
+    handleNext();
+  }, [handleNext]);
 
-  const imageSrc = currentItem === "item1" ? "/item_1.jpg" : "/item_2.jpg";
+  const handleAccept = useCallback((): void => {
+    handleNext();
+  }, [handleNext]);
 
   if (showFinalView) {
     return <FinalProductView />;
@@ -34,38 +52,48 @@ export function ItemSelectionView() {
       <div className="flex flex-col items-center gap-8">
         <motion.div
           key={currentItem}
-          initial={{ filter: "blur(20px)", opacity: 0 }}
-          animate={{ filter: "blur(0px)", opacity: 1 }}
+          initial={{ filter: ANIMATION.BLUR.EXTRA_LARGE, opacity: 0 }}
+          animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
           transition={{
-            duration: 1.4,
-            ease: "easeOut",
+            duration: ANIMATION.DURATION.SLOW,
+            ease: ANIMATION.EASING.OUT,
           }}
           className="relative"
         >
           <img
             src={imageSrc}
-            alt={`Item ${currentItem === "item1" ? "1" : "2"}`}
+            alt={imageAlt}
             className="max-w-2xl max-h-[32rem] object-contain rounded-lg"
           />
         </motion.div>
 
         <div className="flex gap-6">
           <motion.button
-            initial={{ filter: "blur(16px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+            initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
+            transition={{
+              delay: ANIMATION.DELAY.LONG,
+              duration: ANIMATION.DURATION.FAST,
+              ease: ANIMATION.EASING.OUT,
+            }}
             onClick={handleReject}
             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-red-200 transition-colors"
+            aria-label="Reject item"
           >
             <X className="w-4 h-4 text-gray-600" />
           </motion.button>
 
           <motion.button
-            initial={{ filter: "blur(16px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+            initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
+            transition={{
+              delay: ANIMATION.DELAY.LONG,
+              duration: ANIMATION.DURATION.FAST,
+              ease: ANIMATION.EASING.OUT,
+            }}
             onClick={handleAccept}
             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-green-200 transition-colors"
+            aria-label="Accept item"
           >
             <Check className="w-4 h-4 text-gray-600" />
           </motion.button>
