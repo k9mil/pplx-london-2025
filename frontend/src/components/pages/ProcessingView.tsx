@@ -6,8 +6,15 @@ import { ItemSelectionView } from "./ItemSelectionView";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ANIMATION, ERRORS, UI } from "@/constants";
+import type { ImageDescription } from "@/types";
 
-export function ProcessingView() {
+interface ProcessingViewProps {
+  imageDescriptions?: ImageDescription[];
+}
+
+export function ProcessingView({
+  imageDescriptions = [],
+}: ProcessingViewProps) {
   const [showItemSelection, setShowItemSelection] = useState<boolean>(false);
   const [conversationStarted, setConversationStarted] =
     useState<boolean>(false);
@@ -49,13 +56,26 @@ export function ProcessingView() {
 
       await conversation.startSession({ agentId } as any);
 
+      if (imageDescriptions.length > 0) {
+        let contextMessage = "The user has uploaded the following images:\n\n";
+        imageDescriptions.forEach((img, index) => {
+          contextMessage += `Image ${index + 1} (${img.filename}):\n${
+            img.description
+          }\n\n`;
+        });
+        contextMessage +=
+          "Use this information to understand the user's preferences and needs.";
+
+        conversation.sendContextualUpdate(contextMessage);
+      }
+
       setConversationStarted(true);
     } catch (err) {
       if (err instanceof Error) {
         handleError(err);
       }
     }
-  }, [conversation, handleError]);
+  }, [conversation, handleError, imageDescriptions]);
 
   useEffect(() => {
     initConversation();

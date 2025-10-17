@@ -62,6 +62,7 @@ export const API = {
   BASE_URL: "https://pplx-london-api-1052898433949.europe-west2.run.app",
   ENDPOINTS: {
     PROCESS: "/api/process",
+    IMAGE_TO_TEXT: "/api/image-to-text",
   },
 } as const;
 

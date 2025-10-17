@@ -1,4 +1,4 @@
-import { Upload, X } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ProcessingView } from "@/components/pages/ProcessingView";
@@ -13,8 +13,8 @@ import {
   FileUploadTrigger,
 } from "@/components/ui/file-upload";
 import { FILE_UPLOAD, IMAGES, ALT_TEXT, UI } from "@/constants";
-import { uploadImage } from "@/services/api";
-import type { UploadStatus, UploadResponse } from "@/types";
+import { uploadImage, imageToText } from "@/services/api";
+import type { UploadStatus, UploadResponse, ImageDescription } from "@/types";
 
 interface UploadedFile {
   file: File;
@@ -28,6 +28,11 @@ function App() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isLoadingDescriptions, setIsLoadingDescriptions] =
+    useState<boolean>(false);
+  const [imageDescriptions, setImageDescriptions] = useState<
+    ImageDescription[]
+  >([]);
 
   const onFileValidate = useCallback(
     (file: File): string | null => {
@@ -52,8 +57,10 @@ function App() {
     [files.length]
   );
 
-  const handleUploadFiles = useCallback(async (): Promise<void> => {
+  const handleBeginProcess = useCallback(async (): Promise<void> => {
     setIsUploading(true);
+
+    const uploadResults: UploadedFile[] = [];
 
     const uploadPromises = files.map(async (file) => {
       const uploadedFile: UploadedFile = {
@@ -61,39 +68,73 @@ function App() {
         status: "uploading",
       };
 
-      setUploadedFiles((prev) => [...prev, uploadedFile]);
-
       try {
         const response = await uploadImage(file);
-        setUploadedFiles((prev) =>
-          prev.map((uf) =>
-            uf.file === file ? { ...uf, status: "success", response } : uf
-          )
-        );
+        const successfulUpload = {
+          ...uploadedFile,
+          status: "success" as UploadStatus,
+          response,
+        };
+        uploadResults.push(successfulUpload);
+        setUploadedFiles((prev) => [...prev, successfulUpload]);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : UI.TEXT.UPLOAD_ERROR;
-        setUploadedFiles((prev) =>
-          prev.map((uf) =>
-            uf.file === file
-              ? { ...uf, status: "error", error: errorMessage }
-              : uf
-          )
-        );
+        const failedUpload = {
+          ...uploadedFile,
+          status: "error" as UploadStatus,
+          error: errorMessage,
+        };
+        uploadResults.push(failedUpload);
+        setUploadedFiles((prev) => [...prev, failedUpload]);
       }
     });
 
     await Promise.all(uploadPromises);
     setIsUploading(false);
+
+    const successfulUploads = uploadResults.filter(
+      (uf) => uf.status === "success" && uf.response
+    );
+
+    setIsLoadingDescriptions(true);
+    const descriptions: ImageDescription[] = [];
+    for (const upload of successfulUploads) {
+      try {
+        const fileInfo = upload.response?.data?.file;
+        if (!fileInfo) continue;
+
+        const blobName = fileInfo.blob_name || fileInfo.filename;
+
+        if (blobName) {
+          const result = await imageToText({
+            blob_name: blobName,
+            detail_level: "low",
+          });
+
+          if (result.success && result.description) {
+            descriptions.push({
+              filename: upload.file.name,
+              description: result.description,
+              blob_name: blobName,
+            });
+          }
+        }
+      } catch (error) {
+        console.error(
+          `Failed to convert image ${upload.file.name} to text:`,
+          error
+        );
+      }
+    }
+    setIsLoadingDescriptions(false);
+
+    setImageDescriptions(descriptions);
+    setIsProcessing(true);
   }, [files]);
 
-  const handleBeginProcess = useCallback(async (): Promise<void> => {
-    await handleUploadFiles();
-    setIsProcessing(true);
-  }, [handleUploadFiles]);
-
   if (isProcessing) {
-    return <ProcessingView />;
+    return <ProcessingView imageDescriptions={imageDescriptions} />;
   }
 
   const allUploadsSuccessful =
@@ -182,9 +223,18 @@ function App() {
                 size="sm"
                 className="w-fit"
                 onClick={handleBeginProcess}
-                disabled={isUploading || allUploadsSuccessful}
+                disabled={
+                  isUploading || isLoadingDescriptions || allUploadsSuccessful
+                }
               >
-                {isUploading ? UI.TEXT.UPLOADING : UI.LABELS.BEGIN_PROCESS}
+                {(isUploading || isLoadingDescriptions) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {isUploading
+                  ? UI.TEXT.UPLOADING
+                  : isLoadingDescriptions
+                  ? "Processing images..."
+                  : UI.LABELS.BEGIN_PROCESS}
               </Button>
             </div>
           )}
