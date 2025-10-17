@@ -169,3 +169,22 @@ dist-ssr
 
 # Prompts
 *.prompt
+
+# Backend specific
+backend/uploads/
+backend/service-account-key.json
+backend/github-sa-key.json
+backend/.env
+backend/__pycache__/
+backend/routers/__pycache__/
+
+# General uploads
+uploads/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Service account keys (security)
+*-sa-key.json
+service-account-key.json
