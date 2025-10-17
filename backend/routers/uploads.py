@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from typing import List
 from PIL import Image
 import io
+import time
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel, Part
 
@@ -14,6 +15,8 @@ from gcs_storage import get_storage_client, GCSStorage
 from schemas import APIResponse, FileListResponse, ImageToTextRequest, ImageToTextResponse
 from pathlib import Path
 from datetime import datetime
+
+from image_merger.image_merger import ImageMerger
 
 router = APIRouter(prefix="/api", tags=["uploads"])
 
@@ -434,3 +437,52 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
             detail=f"Error processing image to text: {str(e)}"
         )
 
+
+@router.post("/merge-images")
+async def merge_images(
+    url1: str = Body(..., embed=True, description="URL of the first image"),
+    url2: str = Body(..., embed=True, description="URL of the second image"),
+):
+    """
+    Merge two images using backend logic.
+    
+    - **url1**: URL of the first image
+    - **url2**: URL of the second image
+
+    Returns the result from the backend image merge.
+    """
+    try:
+        merger = ImageMerger()
+        result = merger.merge_images(url1, url2)
+        for part in result.candidates[0].content.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                file_extension = ".png"
+                timestamp = int(time.time())
+                file_name = f"remixed_image_{timestamp}{file_extension}"
+
+                # Wrap bytes in UploadFile
+                file_like = io.BytesIO(part.inline_data.data)
+                upload_file = UploadFile(filename=file_name, file=file_like, content_type=part.inline_data.mime_type)
+
+                # Call your existing upload_image logic
+                file_info = await upload_image(file=upload_file)
+                uploaded_files_info = file_info.body  # Extract JSONResponse content
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Images merged and uploaded successfully",
+                "data": uploaded_files_info
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error merging images: {str(e)}"
+        )
