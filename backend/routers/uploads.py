@@ -442,18 +442,25 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
 async def merge_images(
     url1: str = Body(..., embed=True, description="URL of the first image"),
     url2: str = Body(..., embed=True, description="URL of the second image"),
+    prompt: str | None = Body(None, embed=True, description="Optional prompt for image merging")
 ):
     """
     Merge two images using backend logic.
     
     - **url1**: URL of the first image
     - **url2**: URL of the second image
+    - **prompt**: Optional prompt for guiding the merge
 
     Returns the result from the backend image merge.
     """
     try:
         merger = ImageMerger()
-        result = merger.merge_images(url1, url2)
+        
+        if prompt:
+            result = merger.merge_images(url1, url2, prompt)
+        else:
+            result = merger.merge_images(url1, url2)
+
         for part in result.candidates[0].content.parts:
             if part.text is not None:
                 print(part.text)
