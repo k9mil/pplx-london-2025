@@ -104,6 +104,71 @@ GCS_CREDENTIALS_PATH=service-account-key.json
 
 3. **Never commit** `service-account-key.json` or `.env` (already in `.gitignore`)
 
+## API Endpoints
+
+### Image Upload Endpoints
+
+- **POST** `/api/upload` - Upload a single image
+- **POST** `/api/upload/multiple` - Upload multiple images
+- **GET** `/api/uploads` - List uploaded files
+- **DELETE** `/api/uploads/{blob_name}` - Delete a file
+- **POST** `/api/process` - Process image (placeholder for future AI processing)
+
+### Image-to-Text Endpoint
+
+**POST** `/api/image-to-text` - Convert image to detailed text description
+
+This endpoint converts images from your GCS bucket into detailed text descriptions using **Google's Gemini Vision model** (via Vertex AI). It's designed for integration with ElevenLabs agent and other services that need text descriptions instead of direct image URLs.
+
+**Benefits of using Gemini:**
+- ✅ Stays within Google Cloud ecosystem (same credentials as GCS)
+- ✅ Direct GCS URI support for faster processing
+- ✅ No need for separate API keys
+- ✅ High-quality vision capabilities with Gemini 1.5
+
+**Request body:**
+```json
+{
+  "blob_name": "uploads/20241017_123456_image.jpg",  // Recommended: GCS blob path
+  "image_url": "https://...",  // Alternative: public image URL
+  "prompt": "Describe this bedroom in detail",  // Optional custom prompt
+  "detail_level": "high"  // Options: "low", "medium", "high" (default: "high")
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Image successfully converted to text using Gemini Vision",
+  "description": "This is a modern bedroom featuring...",
+  "image_info": {
+    "blob_name": "uploads/20241017_123456_image.jpg",
+    "bucket": "pplx-london-space-uploads",
+    "size": 245678,
+    "content_type": "image/jpeg",
+    "created": "2024-10-17T12:34:56.789Z"
+  }
+}
+```
+
+**Example usage with ElevenLabs:**
+```python
+# 1. Upload image and get blob_name
+response = requests.post("https://api.example.com/api/upload", files={"file": image})
+blob_name = response.json()["data"]["blob_name"]
+
+# 2. Convert to text description using Gemini
+text_response = requests.post(
+    "https://api.example.com/api/image-to-text",
+    json={"blob_name": blob_name, "detail_level": "high"}
+)
+description = text_response.json()["description"]
+
+# 3. Send to ElevenLabs agent
+# Use the text description instead of image URL
+```
+
 ## Environment Variables
 
 See `.env.example` for all options. Key variables:
@@ -111,7 +176,10 @@ See `.env.example` for all options. Key variables:
 - `ALLOWED_ORIGINS` - Frontend URLs for CORS
 - `MAX_FILE_SIZE_MB` - Max upload size (default: 10MB)
 - `GCS_BUCKET_NAME` - Enable GCS (leave empty for local storage)
-- `GCP_PROJECT_ID` - Your GCP project
+- `GCP_PROJECT_ID` - Your GCP project (also used for Vertex AI)
 - `GCS_CREDENTIALS_PATH` - Path to service account JSON
+- `VERTEX_AI_PROJECT` - Vertex AI project (defaults to GCP_PROJECT_ID)
+- `VERTEX_AI_LOCATION` - Vertex AI region (default: us-central1)
+- `GEMINI_MODEL` - Gemini model to use (default: gemini-1.5-flash)
 
-**Note**: Cloud Run sets these automatically via deployment script.
+**Note**: Cloud Run sets these automatically via deployment script. The same service account credentials used for GCS also work for Vertex AI!

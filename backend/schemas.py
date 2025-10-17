@@ -50,3 +50,25 @@ class ProcessImageResponse(BaseModel):
     message: str
     data: dict
 
+
+class ImageToTextRequest(BaseModel):
+    """Request for image-to-text conversion"""
+    blob_name: Optional[str] = Field(None, description="GCS blob name/path of the image")
+    image_url: Optional[str] = Field(None, description="Public URL of the image")
+    prompt: Optional[str] = Field(
+        None, 
+        description="Custom prompt for image description (optional)"
+    )
+    detail_level: Optional[str] = Field(
+        "high",
+        description="Level of detail: 'low', 'medium', or 'high'"
+    )
+
+
+class ImageToTextResponse(BaseModel):
+    """Response for image-to-text conversion"""
+    success: bool
+    message: str
+    description: Optional[str] = None
+    image_info: Optional[dict] = None
+

@@ -1,15 +1,17 @@
 """
 Upload endpoints for handling image uploads
 """
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Body
 from fastapi.responses import JSONResponse
 from typing import List
 from PIL import Image
 import io
+import vertexai
+from vertexai.preview.generative_models import GenerativeModel, Part
 
 from config import settings
 from gcs_storage import get_storage_client, GCSStorage
-from schemas import APIResponse, FileListResponse
+from schemas import APIResponse, FileListResponse, ImageToTextRequest, ImageToTextResponse
 from pathlib import Path
 from datetime import datetime
 
@@ -17,6 +19,18 @@ router = APIRouter(prefix="/api", tags=["uploads"])
 
 # Initialize GCS storage client
 gcs_storage = get_storage_client()
+
+# Initialize Vertex AI
+vertex_ai_initialized = False
+if settings.VERTEX_AI_PROJECT:
+    try:
+        vertexai.init(
+            project=settings.VERTEX_AI_PROJECT,
+            location=settings.VERTEX_AI_LOCATION
+        )
+        vertex_ai_initialized = True
+    except Exception as e:
+        print(f"Warning: Vertex AI initialization failed: {e}")
 
 
 def validate_image(file: UploadFile) -> None:
@@ -288,5 +302,135 @@ async def process_image(file: UploadFile = File(...)):
                 "success": False,
                 "message": e.detail
             }
+        )
+
+
+@router.post("/image-to-text", response_model=ImageToTextResponse)
+async def image_to_text(request: ImageToTextRequest = Body(...)):
+    """
+    Convert an image to detailed text description using Google's Gemini Vision model.
+    
+    This endpoint is designed for integration with ElevenLabs agent or other 
+    services that need text descriptions of images instead of direct image URLs.
+    
+    - **blob_name**: GCS blob path (e.g., "uploads/20241017_123456_image.jpg")
+    - **image_url**: Public URL of the image (alternative to blob_name)
+    - **prompt**: Optional custom prompt for specific description requirements
+    - **detail_level**: low, medium, or high (default: high)
+    
+    Returns a detailed text description of the image content.
+    """
+    try:
+        # Validate Vertex AI is configured
+        if not vertex_ai_initialized:
+            raise HTTPException(
+                status_code=503,
+                detail="Image-to-text service not configured. Vertex AI initialization failed."
+            )
+        
+        # Validate request has either blob_name or image_url
+        if not request.blob_name and not request.image_url:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'blob_name' or 'image_url' must be provided"
+            )
+        
+        # Get image data
+        image_data = None
+        image_info = {}
+        gcs_uri = None
+        
+        if request.blob_name:
+            # Use GCS URI directly for better performance
+            if not settings.USE_GCS or not gcs_storage:
+                raise HTTPException(
+                    status_code=400,
+                    detail="GCS storage not configured. Cannot retrieve image by blob_name."
+                )
+            
+            # Check if file exists
+            if not gcs_storage.file_exists(request.blob_name):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Image not found in bucket: {request.blob_name}"
+                )
+            
+            # Build GCS URI
+            gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{request.blob_name}"
+            
+            # Get image metadata
+            blob = gcs_storage.bucket.blob(request.blob_name)
+            blob.reload()
+            image_info = {
+                "blob_name": request.blob_name,
+                "bucket": settings.GCS_BUCKET_NAME,
+                "size": blob.size,
+                "content_type": blob.content_type,
+                "created": blob.time_created.isoformat() if blob.time_created else None
+            }
+        elif request.image_url:
+            # For external URLs, we'll need to download the image
+            import requests
+            response = requests.get(request.image_url, timeout=30)
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to download image from URL: {response.status_code}"
+                )
+            image_data = response.content
+            image_info = {"image_url": request.image_url}
+        
+        # Prepare the prompt
+        default_prompt = (
+            "Please provide a detailed, comprehensive description of this image. "
+            "Include information about: the main subjects or objects, their colors, "
+            "textures, materials, style, positioning, lighting, mood, and any other "
+            "relevant visual details. Be thorough and descriptive as if explaining "
+            "the image to someone who cannot see it."
+        )
+        
+        if request.detail_level == "low":
+            default_prompt = "Provide a brief description of this image in 2-3 sentences."
+        elif request.detail_level == "medium":
+            default_prompt = (
+                "Provide a moderate description of this image, covering the main "
+                "subjects, colors, and composition in a paragraph."
+            )
+        
+        final_prompt = request.prompt if request.prompt else default_prompt
+        
+        # Initialize Gemini model
+        model = GenerativeModel(settings.GEMINI_MODEL)
+        
+        # Prepare image part
+        if gcs_uri:
+            # Use GCS URI directly
+            image_part = Part.from_uri(gcs_uri, mime_type="image/jpeg")
+        else:
+            # Use image data
+            image_part = Part.from_data(image_data, mime_type="image/jpeg")
+        
+        # Generate content
+        response = model.generate_content([final_prompt, image_part])
+        
+        # Extract description
+        description = response.text
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Image successfully converted to text using Gemini Vision",
+                "description": description,
+                "image_info": image_info
+            }
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing image to text: {str(e)}"
         )
 

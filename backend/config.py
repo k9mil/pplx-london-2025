@@ -40,6 +40,11 @@ class Settings:
     # Use GCS if bucket name is configured
     USE_GCS: bool = bool(GCS_BUCKET_NAME)
     
+    # Vertex AI Configuration (for image-to-text)
+    VERTEX_AI_PROJECT: str = os.getenv("VERTEX_AI_PROJECT", GCP_PROJECT_ID)
+    VERTEX_AI_LOCATION: str = os.getenv("VERTEX_AI_LOCATION", "us-central1")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    
     # App Metadata
     APP_TITLE: str = "PPLX London 2025 API"
     APP_DESCRIPTION: str = "Backend API for image processing and AI-powered shopping assistance"
