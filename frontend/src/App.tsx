@@ -13,10 +13,21 @@ import {
   FileUploadTrigger,
 } from "@/components/ui/file-upload";
 import { FILE_UPLOAD, IMAGES, ALT_TEXT, UI } from "@/constants";
+import { uploadImage } from "@/services/api";
+import type { UploadStatus, UploadResponse } from "@/types";
+
+interface UploadedFile {
+  file: File;
+  status: UploadStatus;
+  response?: UploadResponse;
+  error?: string;
+}
 
 function App() {
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const onFileValidate = useCallback(
     (file: File): string | null => {
@@ -41,13 +52,53 @@ function App() {
     [files.length]
   );
 
-  const handleBeginProcess = useCallback((): void => {
+  const handleUploadFiles = useCallback(async (): Promise<void> => {
+    setIsUploading(true);
+
+    const uploadPromises = files.map(async (file) => {
+      const uploadedFile: UploadedFile = {
+        file,
+        status: "uploading",
+      };
+
+      setUploadedFiles((prev) => [...prev, uploadedFile]);
+
+      try {
+        const response = await uploadImage(file);
+        setUploadedFiles((prev) =>
+          prev.map((uf) =>
+            uf.file === file ? { ...uf, status: "success", response } : uf
+          )
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : UI.TEXT.UPLOAD_ERROR;
+        setUploadedFiles((prev) =>
+          prev.map((uf) =>
+            uf.file === file
+              ? { ...uf, status: "error", error: errorMessage }
+              : uf
+          )
+        );
+      }
+    });
+
+    await Promise.all(uploadPromises);
+    setIsUploading(false);
+  }, [files]);
+
+  const handleBeginProcess = useCallback(async (): Promise<void> => {
+    await handleUploadFiles();
     setIsProcessing(true);
-  }, []);
+  }, [handleUploadFiles]);
 
   if (isProcessing) {
     return <ProcessingView />;
   }
+
+  const allUploadsSuccessful =
+    uploadedFiles.length > 0 &&
+    uploadedFiles.every((uf) => uf.status === "success");
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
@@ -60,7 +111,7 @@ function App() {
           value={files}
           onValueChange={setFiles}
           onFileValidate={onFileValidate}
-          accept="image/*,application/pdf,text/*"
+          accept="image/*"
           maxFiles={FILE_UPLOAD.MAX_FILES}
           className="w-full"
           multiple
@@ -83,17 +134,45 @@ function App() {
           </FileUploadDropzone>
 
           <FileUploadList>
-            {files.map((file) => (
-              <FileUploadItem key={file.name} value={file}>
-                <FileUploadItemPreview />
-                <FileUploadItemMetadata />
-                <FileUploadItemDelete asChild>
-                  <Button variant="ghost" size="icon" className="size-7">
-                    <X />
-                  </Button>
-                </FileUploadItemDelete>
-              </FileUploadItem>
-            ))}
+            {files.map((file) => {
+              const uploadedFile = uploadedFiles.find((uf) => uf.file === file);
+
+              return (
+                <FileUploadItem key={file.name} value={file}>
+                  <FileUploadItemPreview />
+                  <FileUploadItemMetadata />
+                  {uploadedFile && (
+                    <div className="flex items-center gap-2 text-xs">
+                      {uploadedFile.status === "uploading" && (
+                        <span className="text-blue-500">
+                          {UI.TEXT.UPLOADING}
+                        </span>
+                      )}
+                      {uploadedFile.status === "success" && (
+                        <span className="text-green-500">
+                          {UI.TEXT.UPLOAD_SUCCESS}
+                        </span>
+                      )}
+                      {uploadedFile.status === "error" && (
+                        <span className="text-red-500">
+                          {uploadedFile.error || UI.TEXT.UPLOAD_ERROR}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <FileUploadItemDelete asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      disabled={isUploading}
+                    >
+                      <X />
+                    </Button>
+                  </FileUploadItemDelete>
+                </FileUploadItem>
+              );
+            })}
           </FileUploadList>
 
           {files.length > 0 && (
@@ -103,8 +182,9 @@ function App() {
                 size="sm"
                 className="w-fit"
                 onClick={handleBeginProcess}
+                disabled={isUploading || allUploadsSuccessful}
               >
-                {UI.LABELS.BEGIN_PROCESS}
+                {isUploading ? UI.TEXT.UPLOADING : UI.LABELS.BEGIN_PROCESS}
               </Button>
             </div>
           )}
