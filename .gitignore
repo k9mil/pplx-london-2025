@@ -169,3 +169,7 @@ dist-ssr
 
 # Prompts
 *.prompt
+
+# Debug files from Perplexity API
+chunk_debug_*.txt
+debug_output_*.txt
