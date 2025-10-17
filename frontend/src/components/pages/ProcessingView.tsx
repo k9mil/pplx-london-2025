@@ -10,9 +10,12 @@ export function ProcessingView() {
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [micMuted, setMicMuted] = useState(false);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
-  const conversation = useConversation();
+  const conversation = useConversation({
+    micMuted,
+  });
   const { status, isSpeaking } = conversation;
 
   // Map ElevenLabs conversation state to Orb agent state
@@ -29,10 +32,11 @@ export function ProcessingView() {
   useEffect(() => {
     const initConversation = async () => {
       try {
-        // Request microphone permissions
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        setMediaStream(stream);
 
-        // Start ElevenLabs session
         await conversation.startSession({
           agentId: import.meta.env.VITE_ELEVENLABS_AGENT_ID,
         });
@@ -54,10 +58,13 @@ export function ProcessingView() {
 
     initConversation();
 
-    // Cleanup: end session when component unmounts
+    // Cleanup: end session and stop media tracks when component unmounts
     return () => {
       if (conversationStarted) {
         conversation.endSession();
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
@@ -71,9 +78,7 @@ export function ProcessingView() {
   }, [status, conversationStarted]);
 
   const handleMuteToggle = () => {
-    setIsMuted(!isMuted);
-    // Note: ElevenLabs SDK doesn't have a built-in mute method
-    // This would require additional audio track management
+    setMicMuted(!micMuted);
   };
 
   const handleEndConversation = async () => {
@@ -115,15 +120,13 @@ export function ProcessingView() {
         >
           {error ? (
             <span className="text-red-500">{error}</span>
-          ) : status === "connected" ? (
-            "Now you are conversing with a real-time AI agent to understand your preferences, budget & other needs."
           ) : (
-            "Connecting to AI agent..."
+            "Now you are conversing with a real-time AI agent to understand your preferences, budget & other needs."
           )}
         </motion.p>
 
         {/* Connection status and controls */}
-        {conversationStarted && !error && (
+        {!error && (
           <motion.div
             initial={{ filter: "blur(14px)", opacity: 0 }}
             animate={{ filter: "blur(0px)", opacity: 1 }}
@@ -137,38 +140,36 @@ export function ProcessingView() {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div
                 className={`w-2 h-2 rounded-full ${
-                  status === "connected" ? "bg-green-500" : "bg-gray-300"
+                  status === "connected" ? "bg-green-500" : "bg-red-500"
                 }`}
               />
-              <span>{status === "connected" ? "Connected" : "Connecting..."}</span>
+              <span>{status === "connected" ? "Connected" : "Connecting"}</span>
             </div>
 
-            {status === "connected" && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleMuteToggle}
-                  title={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? (
-                    <MicOff className="h-4 w-4" />
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleEndConversation}
-                  title="End conversation"
-                >
-                  <PhoneOff className="h-4 w-4" />
-                </Button>
-              </>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleMuteToggle}
+              title={micMuted ? "Unmute" : "Mute"}
+              disabled={status !== "connected"}
+            >
+              {micMuted ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleEndConversation}
+              title="End conversation"
+              disabled={status !== "connected"}
+            >
+              <PhoneOff className="h-4 w-4" />
+            </Button>
           </motion.div>
         )}
 
