@@ -6,8 +6,9 @@ from fastapi.responses import JSONResponse
 from typing import List
 from PIL import Image
 import io
+import base64
 import vertexai
-from vertexai.preview.generative_models import GenerativeModel, Part
+from perplexity_text_generation import generate_text
 
 from config import settings
 from gcs_storage import get_storage_client, GCSStorage
@@ -398,23 +399,39 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
             )
         
         final_prompt = request.prompt if request.prompt else default_prompt
-        
-        # Initialize Gemini model
-        model = GenerativeModel(settings.GEMINI_MODEL)
-        
-        # Prepare image part
+  
         if gcs_uri:
-            # Use GCS URI directly
-            image_part = Part.from_uri(gcs_uri, mime_type="image/jpeg")
+            image_part = {
+                "type": "image_url",
+                "image_url": {"url": gcs_uri}
+            }
+        elif image_data:
+            # Convert bytes to base64 data URI
+            b64_data = base64.b64encode(image_data).decode("utf-8")
+            data_uri = f"data:image/jpeg;base64,{b64_data}"
+            image_part = {
+                "type": "image_url",
+                "image_url": {"url": data_uri}
+            }
         else:
-            # Use image data
-            image_part = Part.from_data(image_data, mime_type="image/jpeg")
-        
-        # Generate content
-        response = model.generate_content([final_prompt, image_part])
-        
-        # Extract description
-        description = response.text
+            image_part = None
+
+        # Build messages
+        messages = [
+            {"role": "user", "content":[{
+                "type": "text",
+                "text":final_prompt
+            }]
+            }
+        ]
+        if image_part:
+            # For multimodal input, append image part
+            messages[0]["content"].append({"type": "image_url", "image_url": {"url": image_info['image_url']}})
+
+        model = "sonar"
+
+        # Call perplexity client method
+        description = await generate_text(model, messages)
         
         return JSONResponse(
             status_code=200,
@@ -425,7 +442,7 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
                 "image_info": image_info
             }
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
