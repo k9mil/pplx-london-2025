@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import uvicorn
 
 from part_2.models import (
     UserPreference,
     ProductResult,
-    ProductRating,
     NarrowSearchRequest,
     RefinedProduct,
 )
@@ -17,6 +17,14 @@ app = FastAPI(
     title="Furniture Research API",
     description="API for furniture buying research with AI-powered recommendations",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -91,4 +99,4 @@ async def debug_full_response(user_pref: UserPreference):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,71 +1,102 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { X, Check } from "lucide-react";
 import { FinalProductView } from "./FinalProductView";
+import { ANIMATION } from "@/constants";
+import type { ProductResult } from "@/types";
 
-export function ItemSelectionView() {
-  const [currentItem, setCurrentItem] = useState<"item1" | "item2">("item1");
-  const [showFinalView, setShowFinalView] = useState(false);
+interface ItemSelectionViewProps {
+  products: ProductResult[];
+}
 
-  const handleReject = () => {
-    if (currentItem === "item1") {
-      setCurrentItem("item2");
-    } else if (currentItem === "item2") {
+export function ItemSelectionView({ products = [] }: ItemSelectionViewProps) {
+  const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
+  const [showFinalView, setShowFinalView] = useState<boolean>(false);
+
+  const currentProduct = products[currentItemIndex];
+  const isLastItem = currentItemIndex === products.length - 1;
+
+  const handleNext = useCallback((): void => {
+    if (isLastItem) {
       setShowFinalView(true);
+    } else {
+      setCurrentItemIndex((prev) => prev + 1);
     }
-  };
+  }, [isLastItem]);
 
-  const handleAccept = () => {
-    if (currentItem === "item1") {
-      setCurrentItem("item2");
-    } else if (currentItem === "item2") {
-      setShowFinalView(true);
+  const handleReject = useCallback((): void => {
+    handleNext();
+  }, [handleNext]);
+
+  const handleAccept = useCallback((): void => {
+    handleNext();
+  }, [handleNext]);
+
+  useEffect(() => {
+    if (currentProduct && !currentProduct.image_url) {
+      handleNext();
     }
-  };
-
-  const imageSrc = currentItem === "item1" ? "/item_1.jpg" : "/item_2.jpg";
+  }, [currentProduct, handleNext]);
 
   if (showFinalView) {
     return <FinalProductView />;
+  }
+
+  if (!currentProduct) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
+        <p className="text-muted-foreground">No products available</p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
       <div className="flex flex-col items-center gap-8">
         <motion.div
-          key={currentItem}
-          initial={{ filter: "blur(20px)", opacity: 0 }}
-          animate={{ filter: "blur(0px)", opacity: 1 }}
+          key={currentProduct.url}
+          initial={{ filter: ANIMATION.BLUR.EXTRA_LARGE, opacity: 0 }}
+          animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
           transition={{
-            duration: 1.4,
-            ease: "easeOut",
+            duration: ANIMATION.DURATION.SLOW,
+            ease: ANIMATION.EASING.OUT,
           }}
           className="relative"
         >
           <img
-            src={imageSrc}
-            alt={`Item ${currentItem === "item1" ? "1" : "2"}`}
+            src={currentProduct.image_url || ""}
+            alt={currentProduct.name}
             className="max-w-2xl max-h-[32rem] object-contain rounded-lg"
           />
         </motion.div>
 
         <div className="flex gap-6">
           <motion.button
-            initial={{ filter: "blur(16px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+            initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
+            transition={{
+              delay: ANIMATION.DELAY.LONG,
+              duration: ANIMATION.DURATION.FAST,
+              ease: ANIMATION.EASING.OUT,
+            }}
             onClick={handleReject}
             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-red-200 transition-colors"
+            aria-label="Reject item"
           >
             <X className="w-4 h-4 text-gray-600" />
           </motion.button>
 
           <motion.button
-            initial={{ filter: "blur(16px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
+            initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
+            transition={{
+              delay: ANIMATION.DELAY.LONG,
+              duration: ANIMATION.DURATION.FAST,
+              ease: ANIMATION.EASING.OUT,
+            }}
             onClick={handleAccept}
             className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-green-200 transition-colors"
+            aria-label="Accept item"
           >
             <Check className="w-4 h-4 text-gray-600" />
           </motion.button>

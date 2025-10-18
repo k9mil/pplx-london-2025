@@ -6,42 +6,57 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { ANIMATION, IMAGES, ALT_TEXT, UI } from "@/constants";
+
+const PRODUCT_INFO = {
+  NAME: "HEMNES Coffee Table",
+  PRICE: "£299.99",
+  DIMENSIONS: '47 1/4" x 27 1/2" x 16 7/8"',
+  WEIGHT: "77 lbs",
+  PURCHASE_URL: "https://www.ikea.com",
+  DESCRIPTION:
+    "This premium product combines cutting-edge technology with elegant design. Crafted with attention to detail and built to last.",
+  FEATURES: [
+    "High-quality materials and construction",
+    "Advanced performance features",
+    "User-friendly interface and controls",
+    "Comprehensive warranty and support",
+  ],
+} as const;
 
 export function FinalProductView() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
       <div className="w-full max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Left side - Product Image */}
           <motion.div
-            initial={{ filter: "blur(20px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
+            initial={{ filter: ANIMATION.BLUR.EXTRA_LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
             transition={{
-              duration: 1.4,
-              ease: "easeOut",
+              duration: ANIMATION.DURATION.SLOW,
+              ease: ANIMATION.EASING.OUT,
             }}
             className="flex justify-center"
           >
             <img
-              src="/item_3.jpg"
-              alt="HEMNES Coffee Table"
+              src={IMAGES.BEDROOM_THREE}
+              alt={ALT_TEXT.BEDROOM_THREE}
               className="max-w-lg max-h-96 object-contain rounded-lg"
             />
           </motion.div>
 
-          {/* Right side - Product Information */}
           <motion.div
-            initial={{ filter: "blur(16px)", opacity: 0 }}
-            animate={{ filter: "blur(0px)", opacity: 1 }}
+            initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
+            animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
             transition={{
-              duration: 1.4,
-              delay: 0.2,
-              ease: "easeOut",
+              duration: ANIMATION.DURATION.SLOW,
+              delay: ANIMATION.DELAY.SHORT,
+              ease: ANIMATION.EASING.OUT,
             }}
             className="space-y-6"
           >
             <h1 className="text-3xl font-light text-gray-900">
-              HEMNES Coffee Table
+              {PRODUCT_INFO.NAME}
             </h1>
 
             <Accordion
@@ -54,16 +69,11 @@ export function FinalProductView() {
                 <AccordionTrigger>Product Information</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2 text-gray-600">
-                    <p>
-                      This premium product combines cutting-edge technology with
-                      elegant design. Crafted with attention to detail and built
-                      to last.
-                    </p>
+                    <p>{PRODUCT_INFO.DESCRIPTION}</p>
                     <ul className="list-disc list-inside space-y-1 mt-3">
-                      <li>High-quality materials and construction</li>
-                      <li>Advanced performance features</li>
-                      <li>User-friendly interface and controls</li>
-                      <li>Comprehensive warranty and support</li>
+                      {PRODUCT_INFO.FEATURES.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                      ))}
                     </ul>
                   </div>
                 </AccordionContent>
@@ -73,8 +83,8 @@ export function FinalProductView() {
                 <AccordionTrigger>Price & Availability</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-gray-600">
-                    The HEMNES coffee table costs £299.99 including shipping and
-                    is currently in stock.
+                    The {PRODUCT_INFO.NAME} costs {PRODUCT_INFO.PRICE} including
+                    shipping and is currently in stock.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -86,12 +96,14 @@ export function FinalProductView() {
                     <div className="flex justify-between items-center">
                       <span>Dimensions:</span>
                       <span className="font-semibold">
-                        47 1/4" x 27 1/2" x 16 7/8"
+                        {PRODUCT_INFO.DIMENSIONS}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span>Weight:</span>
-                      <span className="font-semibold">77 lbs</span>
+                      <span className="font-semibold">
+                        {PRODUCT_INFO.WEIGHT}
+                      </span>
                     </div>
                   </div>
                 </AccordionContent>
@@ -99,22 +111,22 @@ export function FinalProductView() {
             </Accordion>
 
             <motion.div
-              initial={{ filter: "blur(14px)", opacity: 0 }}
-              animate={{ filter: "blur(0px)", opacity: 1 }}
+              initial={{ filter: ANIMATION.BLUR.MEDIUM, opacity: 0 }}
+              animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
               transition={{
-                duration: 1.4,
-                delay: 0.4,
-                ease: "easeOut",
+                duration: ANIMATION.DURATION.SLOW,
+                delay: ANIMATION.DELAY.MEDIUM,
+                ease: ANIMATION.EASING.OUT,
               }}
               className="mt-6"
             >
               <Button variant="outline" size="sm" className="w-fit" asChild>
                 <a
-                  href="https://www.ikea.com"
+                  href={PRODUCT_INFO.PURCHASE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Purchase
+                  {UI.LABELS.PURCHASE}
                 </a>
               </Button>
             </motion.div>

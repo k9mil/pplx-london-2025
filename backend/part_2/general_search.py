@@ -142,6 +142,7 @@ Search for things like:
 
 Use the web_search tool - this is MANDATORY.
 
+Gather as many product URLs as you can from the search results.
 Find as many DIFFERENT products as you can from these 2 retailers - different models, brands, sizes, colors within the budget.
 """
 
