@@ -74,3 +74,28 @@ export interface GeneralSearchRequest {
   essential_features: string[];
   type: string;
 }
+
+export interface MergeImagesRequest {
+  url1: string;
+  url2: string;
+  prompt?: string;
+}
+
+export interface MergeImagesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    file: {
+      filename: string;
+      original_filename: string;
+      public_url?: string;
+      path?: string;
+      size: number;
+      width: number;
+      height: number;
+      format: string;
+      content_type: string;
+      storage: string;
+    };
+  };
+}

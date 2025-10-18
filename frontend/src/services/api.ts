@@ -6,6 +6,8 @@ import type {
   ImageToTextResponse,
   GeneralSearchRequest,
   ProductResult,
+  MergeImagesRequest,
+  MergeImagesResponse,
 } from "@/types";
 
 export const uploadImage = async (file: File): Promise<UploadResponse> => {
@@ -65,6 +67,25 @@ export const generalSearch = async (
   if (!response.ok) {
     const error: UploadError = await response.json();
     throw new Error(error.detail || "General search failed");
+  }
+
+  return response.json();
+};
+
+export const mergeImages = async (
+  request: MergeImagesRequest
+): Promise<MergeImagesResponse> => {
+  const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.MERGE_IMAGES}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error: UploadError = await response.json();
+    throw new Error(error.detail || "Image merge failed");
   }
 
   return response.json();

@@ -64,6 +64,7 @@ export const API = {
     PROCESS: "/api/process",
     IMAGE_TO_TEXT: "/api/image-to-text",
     GENERAL_SEARCH: "/search/general",
+    MERGE_IMAGES: "/api/merge-images",
   },
 } as const;
 

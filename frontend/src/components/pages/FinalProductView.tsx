@@ -6,25 +6,53 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ANIMATION, IMAGES, ALT_TEXT, UI } from "@/constants";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ANIMATION, UI } from "@/constants";
+import type { ProductResult } from "@/types";
 
-const PRODUCT_INFO = {
-  NAME: "HEMNES Coffee Table",
-  PRICE: "£299.99",
-  DIMENSIONS: '47 1/4" x 27 1/2" x 16 7/8"',
-  WEIGHT: "77 lbs",
-  PURCHASE_URL: "https://www.ikea.com",
-  DESCRIPTION:
-    "This premium product combines cutting-edge technology with elegant design. Crafted with attention to detail and built to last.",
-  FEATURES: [
-    "High-quality materials and construction",
-    "Advanced performance features",
-    "User-friendly interface and controls",
-    "Comprehensive warranty and support",
-  ],
-} as const;
+interface FinalProductViewProps {
+  mergedImageUrl?: string;
+  likedProduct?: ProductResult;
+  isLoading?: boolean;
+}
 
-export function FinalProductView() {
+export function FinalProductView({
+  mergedImageUrl,
+  likedProduct,
+  isLoading = false,
+}: FinalProductViewProps) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-8">
+        <div className="w-full max-w-6xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div className="flex justify-center">
+              <Skeleton className="w-full max-w-lg h-96 rounded-lg" />
+            </div>
+
+            <div className="space-y-6">
+              <Skeleton className="h-10 w-3/4" />
+
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+
+              <Skeleton className="h-10 w-32 mt-6" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mergedImageUrl || !likedProduct) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-8">
+        <p className="text-muted-foreground">No product selected</p>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-8">
       <div className="w-full max-w-6xl">
@@ -39,8 +67,8 @@ export function FinalProductView() {
             className="flex justify-center"
           >
             <img
-              src={IMAGES.BEDROOM_THREE}
-              alt={ALT_TEXT.BEDROOM_THREE}
+              src={mergedImageUrl}
+              alt={likedProduct.name}
               className="max-w-lg max-h-96 object-contain rounded-lg"
             />
           </motion.div>
@@ -56,7 +84,7 @@ export function FinalProductView() {
             className="space-y-6"
           >
             <h1 className="text-3xl font-light text-gray-900">
-              {PRODUCT_INFO.NAME}
+              {likedProduct.name}
             </h1>
 
             <Accordion
@@ -69,12 +97,7 @@ export function FinalProductView() {
                 <AccordionTrigger>Product Information</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2 text-gray-600">
-                    <p>{PRODUCT_INFO.DESCRIPTION}</p>
-                    <ul className="list-disc list-inside space-y-1 mt-3">
-                      {PRODUCT_INFO.FEATURES.map((feature) => (
-                        <li key={feature}>{feature}</li>
-                      ))}
-                    </ul>
+                    <p>{likedProduct.description}</p>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -83,29 +106,9 @@ export function FinalProductView() {
                 <AccordionTrigger>Price & Availability</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-gray-600">
-                    The {PRODUCT_INFO.NAME} costs {PRODUCT_INFO.PRICE} including
-                    shipping and is currently in stock.
+                    The {likedProduct.name} costs £{likedProduct.price} and is
+                    currently available.
                   </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="specifications">
-                <AccordionTrigger>Specifications</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2 text-gray-600">
-                    <div className="flex justify-between items-center">
-                      <span>Dimensions:</span>
-                      <span className="font-semibold">
-                        {PRODUCT_INFO.DIMENSIONS}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Weight:</span>
-                      <span className="font-semibold">
-                        {PRODUCT_INFO.WEIGHT}
-                      </span>
-                    </div>
-                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -122,7 +125,7 @@ export function FinalProductView() {
             >
               <Button variant="outline" size="sm" className="w-fit" asChild>
                 <a
-                  href={PRODUCT_INFO.PURCHASE_URL}
+                  href={likedProduct.url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

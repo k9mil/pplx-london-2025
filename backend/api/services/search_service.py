@@ -7,6 +7,7 @@ import re
 import httpx
 import asyncio
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv()
 
@@ -16,7 +17,7 @@ if not api_key:
 
 
 async def fetch_and_parse_product(
-    url: str, index: int, total: int, client: Perplexity
+    url: str, index: int, total: int, client: Perplexity, executor: ThreadPoolExecutor
 ) -> Optional[ProductResult]:
     try:
         print(f"\n[{index}/{total}] Processing: {url}")
@@ -71,8 +72,8 @@ Description: [brief 1-2 sentence description]
 Image URL: [main product image URL if found]
 """
 
-        try:
-            parse_response = client.chat.completions.create(
+        def call_perplexity():
+            return client.chat.completions.create(
                 model="sonar",
                 messages=[
                     {
@@ -83,6 +84,10 @@ Image URL: [main product image URL if found]
                 ],
                 temperature=0.1,
             )
+
+        try:
+            loop = asyncio.get_event_loop()
+            parse_response = await loop.run_in_executor(executor, call_perplexity)
         except Exception as e:
             print(f"   ❌ Error calling Sonar API: {str(e)}")
             traceback.print_exc()
@@ -115,7 +120,7 @@ Image URL: [main product image URL if found]
 
 
 async def general_search(
-    user_pref: UserPreference, num_results: int = 200
+    user_pref: UserPreference, num_results: int = 5
 ) -> List[ProductResult]:
     try:
         print("\n" + "=" * 80)
@@ -300,25 +305,30 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
 
         async def fetch_all_products():
             try:
-                tasks = [
-                    fetch_and_parse_product(url, i, len(urls[:num_results]), client)
-                    for i, url in enumerate(urls[:num_results], 1)
-                ]
-                print(f"✅ Created {len(tasks)} async tasks")
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                print("✅ Completed all async tasks")
-
-                valid_results = []
-                for i, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        print(f"❌ Task {i + 1} raised exception: {result}")
-                        traceback.print_exception(
-                            type(result), result, result.__traceback__
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    tasks = [
+                        fetch_and_parse_product(
+                            url, i, len(urls[:num_results]), client, executor
                         )
-                    elif result is not None:
-                        valid_results.append(result)
+                        for i, url in enumerate(urls[:num_results], 1)
+                    ]
+                    print(
+                        f"✅ Created {len(tasks)} async tasks with ThreadPoolExecutor"
+                    )
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    print("✅ Completed all async tasks")
 
-                return valid_results
+                    valid_results = []
+                    for i, result in enumerate(results):
+                        if isinstance(result, Exception):
+                            print(f"❌ Task {i + 1} raised exception: {result}")
+                            traceback.print_exception(
+                                type(result), result, result.__traceback__
+                            )
+                        elif result is not None:
+                            valid_results.append(result)
+
+                    return valid_results
             except Exception:
                 print("❌ Error in fetch_all_products:")
                 traceback.print_exc()

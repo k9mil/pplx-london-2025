@@ -134,7 +134,16 @@ function App() {
   }, [files]);
 
   if (isProcessing) {
-    return <ProcessingView imageDescriptions={imageDescriptions} />;
+    const firstUploadedUrl =
+      uploadedFiles[0]?.response?.data?.file?.public_url ||
+      uploadedFiles[0]?.response?.data?.file?.path;
+
+    return (
+      <ProcessingView
+        imageDescriptions={imageDescriptions}
+        uploadedImageUrl={firstUploadedUrl}
+      />
+    );
   }
 
   const allUploadsSuccessful =

@@ -4,42 +4,102 @@ import { X, Check } from "lucide-react";
 import { FinalProductView } from "./FinalProductView";
 import { ANIMATION } from "@/constants";
 import type { ProductResult } from "@/types";
+import { mergeImages } from "@/services/api";
 
 interface ItemSelectionViewProps {
   products: ProductResult[];
+  uploadedImageUrl?: string;
 }
 
-export function ItemSelectionView({ products = [] }: ItemSelectionViewProps) {
+const STORAGE_KEY = "lastLikedProduct";
+
+export function ItemSelectionView({
+  products = [],
+  uploadedImageUrl,
+}: ItemSelectionViewProps) {
   const [currentItemIndex, setCurrentItemIndex] = useState<number>(0);
   const [showFinalView, setShowFinalView] = useState<boolean>(false);
+  const [lastLikedProduct, setLastLikedProduct] =
+    useState<ProductResult | null>(null);
+  const [mergedImageUrl, setMergedImageUrl] = useState<string | null>(null);
+  const [isMerging, setIsMerging] = useState<boolean>(false);
 
   const currentProduct = products[currentItemIndex];
   const isLastItem = currentItemIndex === products.length - 1;
 
-  const handleNext = useCallback((): void => {
+  const handleMergeImages = useCallback(
+    async (likedProduct: ProductResult): Promise<void> => {
+      if (!uploadedImageUrl || !likedProduct.image_url) {
+        console.error("Missing image URLs for merging");
+        setShowFinalView(true);
+        return;
+      }
+
+      setIsMerging(true);
+      try {
+        const result = await mergeImages({
+          url1: likedProduct.image_url,
+          url2: uploadedImageUrl,
+        });
+
+        const imageUrl =
+          result.data.file.public_url ||
+          (result.data.file.path
+            ? `http://localhost:8000/${result.data.file.path}`
+            : null);
+
+        if (imageUrl) {
+          setMergedImageUrl(imageUrl);
+        }
+      } catch (error) {
+        console.error("Failed to merge images:", error);
+      } finally {
+        setIsMerging(false);
+        setShowFinalView(true);
+      }
+    },
+    [uploadedImageUrl]
+  );
+
+  const handleReject = useCallback((): void => {
     if (isLastItem) {
-      setShowFinalView(true);
+      if (lastLikedProduct) {
+        handleMergeImages(lastLikedProduct);
+      } else {
+        setShowFinalView(true);
+      }
     } else {
       setCurrentItemIndex((prev) => prev + 1);
     }
-  }, [isLastItem]);
-
-  const handleReject = useCallback((): void => {
-    handleNext();
-  }, [handleNext]);
+  }, [isLastItem, lastLikedProduct, handleMergeImages]);
 
   const handleAccept = useCallback((): void => {
-    handleNext();
-  }, [handleNext]);
+    if (currentProduct) {
+      setLastLikedProduct(currentProduct);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentProduct));
+
+      if (isLastItem) {
+        handleMergeImages(currentProduct);
+      } else {
+        setCurrentItemIndex((prev) => prev + 1);
+      }
+    }
+  }, [currentProduct, isLastItem, handleMergeImages]);
 
   useEffect(() => {
     if (currentProduct && !currentProduct.image_url) {
-      handleNext();
+      handleReject();
     }
-  }, [currentProduct, handleNext]);
+  }, [currentProduct, handleReject]);
 
-  if (showFinalView) {
-    return <FinalProductView />;
+  if (isMerging || showFinalView) {
+    return (
+      <FinalProductView
+        mergedImageUrl={mergedImageUrl || undefined}
+        likedProduct={lastLikedProduct || undefined}
+        isLoading={isMerging}
+      />
+    );
   }
 
   if (!currentProduct) {

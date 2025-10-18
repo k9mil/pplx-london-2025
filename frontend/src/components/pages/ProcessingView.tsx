@@ -11,10 +11,12 @@ import type { ImageDescription, ProductResult } from "@/types";
 
 interface ProcessingViewProps {
   imageDescriptions?: ImageDescription[];
+  uploadedImageUrl?: string;
 }
 
 export function ProcessingView({
   imageDescriptions = [],
+  uploadedImageUrl,
 }: ProcessingViewProps) {
   const [showItemSelection, setShowItemSelection] = useState<boolean>(false);
   const [conversationStarted, setConversationStarted] =
@@ -100,7 +102,7 @@ export function ProcessingView({
           essential_features: [],
           type: "sofa",
         },
-        10
+        5
       );
       setProducts(results);
       setShowItemSelection(true);
@@ -132,7 +134,12 @@ export function ProcessingView({
   }, [conversation, fetchProducts]);
 
   if (showItemSelection) {
-    return <ItemSelectionView products={products} />;
+    return (
+      <ItemSelectionView
+        products={products}
+        uploadedImageUrl={uploadedImageUrl}
+      />
+    );
   }
 
   const isConnected = status === UI.STATUS.CONNECTED;
