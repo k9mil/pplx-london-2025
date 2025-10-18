@@ -3,10 +3,6 @@ from typing import Optional, List
 
 
 class UserPreference(BaseModel):
-    """
-    Model for storing user preferences for furniture buying research.
-    """
-
     type: str = Field(..., description="Type of furniture (e.g., sofa, chair, table)")
     budget_range: tuple[float, float] = Field(
         ..., description="Budget range as (min, max) in currency units"
@@ -30,10 +26,6 @@ class UserPreference(BaseModel):
 
 
 class ProductResult(BaseModel):
-    """
-    Model for a product result from search.
-    """
-
     name: str = Field(..., description="Product name")
     url: str = Field(..., description="Product URL")
     price: float = Field(..., description="Product price")
@@ -53,10 +45,6 @@ class ProductResult(BaseModel):
 
 
 class ProductRating(BaseModel):
-    """
-    Model for user rating of a product.
-    """
-
     url: str = Field(..., description="Product URL")
     score: int = Field(..., ge=1, le=10, description="User rating from 1-10")
 
@@ -65,10 +53,6 @@ class ProductRating(BaseModel):
 
 
 class NarrowSearchRequest(BaseModel):
-    """
-    Request model for narrow/refined search.
-    """
-
     user_preference: UserPreference
     product_ratings: List[ProductRating] = Field(
         ..., min_length=1, description="List of rated products from general search"
@@ -92,10 +76,6 @@ class NarrowSearchRequest(BaseModel):
 
 
 class RefinedProduct(BaseModel):
-    """
-    Model for a refined product recommendation with style analysis.
-    """
-
     name: str = Field(..., description="Product name")
     url: str = Field(..., description="Product URL")
     price: float = Field(..., description="Product price")

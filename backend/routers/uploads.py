@@ -1,7 +1,3 @@
-"""
-Upload endpoints for handling image uploads
-"""
-
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
@@ -21,10 +17,8 @@ from api.services.image_merger import ImageMerger
 
 router = APIRouter(prefix="/api", tags=["uploads"])
 
-# Initialize GCS storage client
 gcs_storage = get_storage_client()
 
-# Initialize Vertex AI
 vertex_ai_initialized = False
 if settings.VERTEX_AI_PROJECT:
     try:
@@ -51,7 +45,6 @@ if settings.VERTEX_AI_PROJECT:
 
 
 def validate_image(file: UploadFile) -> None:
-    """Validate uploaded image file"""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
 
@@ -64,7 +57,6 @@ def validate_image(file: UploadFile) -> None:
 
 
 async def save_upload_file(upload_file: UploadFile) -> dict:
-    """Save uploaded file to GCS or local storage and return file info"""
     try:
         if not upload_file.filename:
             raise HTTPException(status_code=400, detail="Filename is required")
@@ -140,18 +132,9 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
 @router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
-    """
-    Upload a single image file
-
-    - **file**: Image file (jpg, jpeg, png, gif, webp)
-
-    Returns file information including path, size, and dimensions
-    """
     try:
-        # Validate image
         validate_image(file)
         print("validate image done")
-        # Save file and get info
         file_info = await save_upload_file(file)
         print("file info 2 : ", file_info)
         return JSONResponse(
@@ -176,13 +159,6 @@ async def upload_image(file: UploadFile = File(...)):
 
 @router.post("/upload/multiple")
 async def upload_multiple_images(files: List[UploadFile] = File(...)):
-    """
-    Upload multiple image files
-
-    - **files**: List of image files (jpg, jpeg, png, gif, webp)
-
-    Returns information for all uploaded files
-    """
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
@@ -215,7 +191,6 @@ async def upload_multiple_images(files: List[UploadFile] = File(...)):
 
 @router.get("/uploads")
 async def list_uploads(limit: int = 100):
-    """List uploaded files"""
     try:
         if settings.USE_GCS and gcs_storage:
             files = gcs_storage.list_files(max_results=limit)
@@ -226,7 +201,6 @@ async def list_uploads(limit: int = 100):
                 "files": files,
             }
         else:
-            # List local files
             if not settings.UPLOAD_DIR.exists():
                 return {"success": True, "storage": "local", "count": 0, "files": []}
 
@@ -253,20 +227,15 @@ async def list_uploads(limit: int = 100):
 
 @router.delete("/uploads/{blob_name:path}")
 async def delete_upload(blob_name: str):
-    """Delete an uploaded file from GCS or local storage"""
     try:
         if settings.USE_GCS and gcs_storage:
-            # Delete from GCS
             gcs_storage.delete_file(blob_name)
             return {"success": True, "message": f"File {blob_name} deleted from GCS"}
         else:
-            # Delete from local storage
             file_path = settings.UPLOAD_DIR / blob_name
 
             if not file_path.exists():
                 raise HTTPException(status_code=404, detail="File not found")
-
-            import os
 
             os.remove(file_path)
             return {
@@ -281,22 +250,9 @@ async def delete_upload(blob_name: str):
 
 @router.post("/process")
 async def process_image(file: UploadFile = File(...)):
-    """
-    Process uploaded image and extract information
-
-    This endpoint will be extended to integrate with AI services
-    for image analysis and product matching
-    """
     try:
-        # Validate and save image
         validate_image(file)
         file_info = await save_upload_file(file)
-
-        # TODO: Add AI processing logic here
-        # - Image analysis
-        # - Object detection
-        # - Style extraction
-        # - Product matching
 
         return JSONResponse(
             status_code=200,
@@ -321,28 +277,13 @@ async def process_image(file: UploadFile = File(...)):
 
 @router.post("/image-to-text", response_model=ImageToTextResponse)
 async def image_to_text(request: ImageToTextRequest = Body(...)):
-    """
-    Convert an image to detailed text description using Google's Gemini Vision model.
-
-    This endpoint is designed for integration with ElevenLabs agent or other
-    services that need text descriptions of images instead of direct image URLs.
-
-    - **blob_name**: GCS blob path (e.g., "uploads/20241017_123456_image.jpg")
-    - **image_url**: Public URL of the image (alternative to blob_name)
-    - **prompt**: Optional custom prompt for specific description requirements
-    - **detail_level**: low, medium, or high (default: high)
-
-    Returns a detailed text description of the image content.
-    """
     try:
-        # Validate Vertex AI is configured
         if not vertex_ai_initialized:
             raise HTTPException(
                 status_code=503,
                 detail="Image-to-text service not configured. Vertex AI initialization failed.",
             )
 
-        # Validate request has either blob_name or image_url
         if not request.blob_name and not request.image_url:
             raise HTTPException(
                 status_code=400,
@@ -354,24 +295,20 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
         gcs_uri: Optional[str] = None
 
         if request.blob_name:
-            # Use GCS URI directly for better performance
             if not settings.USE_GCS or not gcs_storage:
                 raise HTTPException(
                     status_code=400,
                     detail="GCS storage not configured. Cannot retrieve image by blob_name.",
                 )
 
-            # Check if file exists
             if not gcs_storage.file_exists(request.blob_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Image not found in bucket: {request.blob_name}",
                 )
 
-            # Build GCS URI
             gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{request.blob_name}"
 
-            # Get image metadata
             blob = gcs_storage.bucket.blob(request.blob_name)
             blob.reload()
             image_info = {
@@ -382,7 +319,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
                 "created": blob.time_created.isoformat() if blob.time_created else None,
             }
         elif request.image_url:
-            # For external URLs, we'll need to download the image
             import requests
 
             response = requests.get(request.image_url, timeout=30)
@@ -394,7 +330,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
             image_data = response.content
             image_info = {"image_url": request.image_url}
 
-        # Prepare the prompt
         default_prompt = (
             "Please provide a detailed, comprehensive description of this image. "
             "Include information about: the main subjects or objects, their colors, "
@@ -415,7 +350,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
 
         final_prompt = request.prompt if request.prompt else default_prompt
 
-        # Initialize Gemini model
         model = GenerativeModel(settings.GEMINI_MODEL)
 
         if gcs_uri:
@@ -427,7 +361,7 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
 
         response = model.generate_content([final_prompt, image_part], stream=False)
 
-        description = response.text if hasattr(response, "text") else str(response)  # type: ignore
+        description = response.text if hasattr(response, "text") else str(response)
 
         return JSONResponse(
             status_code=200,
@@ -455,15 +389,6 @@ async def merge_images(
         None, embed=True, description="Optional prompt for image merging"
     ),
 ):
-    """
-    Merge two images using backend logic.
-
-    - **url1**: URL of the first image
-    - **url2**: URL of the second image
-    - **prompt**: Optional prompt for guiding the merge
-
-    Returns the result from the backend image merge.
-    """
     try:
         merger = ImageMerger()
         result = merger.merge_images(url1, url2, prompt)
