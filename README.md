@@ -83,6 +83,14 @@ python main.py
 # Runs on http://localhost:8000
 ```
 
+**FRONTEND:**
+```bash
+cd frontend
+npm i
+VITE_ELEVENLABS_AGENT_ID=your-agent-id
+npm run dev
+```
+
 ## Team
 
 - <a href="https://www.linkedin.com/in/kamilzak00/">Kamil Zak</a>
