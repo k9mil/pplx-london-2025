@@ -11,9 +11,6 @@ Which is why we built space. Traditional image generation tools can generate ima
 
 ![space Product](https://github.com/user-attachments/assets/813acdc2-2c01-4ce4-b969-53fe1a209e93)
 
-## 🎬 Demo
-https://github.com/user-attachments/assets/19f0a34c-018f-42ee-a929-1c33e59e9dde
-
 ## 🎯 Project Overview
 
 _space_ streamlines the furtniture purchasing experience, by:
