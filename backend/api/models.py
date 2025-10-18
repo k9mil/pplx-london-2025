@@ -3,24 +3,18 @@ from typing import Optional, List
 
 
 class UserPreference(BaseModel):
-    type: str = Field(..., description="Type of furniture (e.g., sofa, chair, table)")
-    budget_range: tuple[float, float] = Field(
-        ..., description="Budget range as (min, max) in currency units"
-    )
-    dimensions: Optional[dict[str, float]] = Field(
-        default=None,
-        description="Dimensions requirements (e.g., {'width': 200, 'depth': 90, 'height': 85})",
-    )
-    essential_features: List[str] = Field(
-        default_factory=list, description="List of essential features required"
+    type: str = Field(..., description="Type of item (e.g., sofa, chair, table)")
+    budget: float = Field(..., description="Maximum budget in currency units")
+    additional_requirements: str = Field(
+        default="", description="Additional requirements or preferences for the item"
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "type": "sofa",
-                "budget_range": (500.0, 1500.0),
-                "essential_features": [],
+                "budget": 1500.0,
+                "additional_requirements": "Must be comfortable and modern style",
             }
         }
 
@@ -63,8 +57,8 @@ class NarrowSearchRequest(BaseModel):
             "example": {
                 "user_preference": {
                     "type": "sofa",
-                    "budget_range": (500.0, 1500.0),
-                    "essential_features": ["reclining", "leather"],
+                    "budget": 1500.0,
+                    "additional_requirements": "Must be comfortable and modern style",
                 },
                 "product_ratings": [
                     {"url": "https://example.com/sofa1", "score": 9},

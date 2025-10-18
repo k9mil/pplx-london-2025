@@ -70,9 +70,15 @@ export interface ProductResult {
 }
 
 export interface GeneralSearchRequest {
-  budget_range: [number, number];
-  essential_features: string[];
+  budget: number;
+  additional_requirements: string;
   type: string;
+}
+
+export interface ClientToolResult {
+  type: string;
+  budget: number;
+  additional_requirements: string;
 }
 
 export interface MergeImagesRequest {

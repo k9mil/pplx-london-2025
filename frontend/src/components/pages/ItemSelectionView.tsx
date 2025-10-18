@@ -114,6 +114,18 @@ export function ItemSelectionView({
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
       <div className="flex flex-col items-center gap-8">
         <motion.div
+          initial={{ filter: ANIMATION.BLUR.MEDIUM, opacity: 0 }}
+          animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}
+          transition={{
+            duration: ANIMATION.DURATION.NORMAL,
+            ease: ANIMATION.EASING.OUT,
+          }}
+          className="text-xs text-muted-foreground text-center mb-2"
+        >
+          {currentItemIndex + 1} of {products.length}
+        </motion.div>
+
+        <motion.div
           key={currentProduct.url}
           initial={{ filter: ANIMATION.BLUR.EXTRA_LARGE, opacity: 0 }}
           animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}

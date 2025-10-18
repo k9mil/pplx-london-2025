@@ -65,8 +65,14 @@ export const generalSearch = async (
   );
 
   if (!response.ok) {
-    const error: UploadError = await response.json();
-    throw new Error(error.detail || "General search failed");
+    try {
+      const error: UploadError = await response.json();
+      throw new Error(
+        error.detail || `Search failed with status ${response.status}`
+      );
+    } catch (parseError) {
+      throw new Error(`Search failed with status ${response.status}`);
+    }
   }
 
   return response.json();

@@ -127,26 +127,28 @@ async def general_search(
         print(f"STEP 1: Finding {num_results} product URLs")
         print("=" * 80 + "\n")
 
-        features_str = (
-            ", ".join(user_pref.essential_features)
-            if user_pref.essential_features
-            else "none specified"
+        additional_req_str = (
+            f"\nAdditional Requirements: {user_pref.additional_requirements}"
+            if user_pref.additional_requirements
+            else ""
         )
 
         search_prompt = f"""
-Search for many different {user_pref.type} product pages from IKEA UK and JYSK UK. I need at least {num_results} individual products total.
+## Task
+Search for {user_pref.type} product pages from IKEA UK and JYSK UK that meet the following criteria. Find at least {num_results} individual products total.
 
-Budget: £{user_pref.budget_range[0]}-£{user_pref.budget_range[1]}
-Features: {features_str}
+## Criteria
+- **Budget**: Maximum £{user_pref.budget} (find products at or below this price)
+- **Type of Item**: {user_pref.type}{additional_req_str}
 
-Search for things like:
-"site:ikea.com/gb/en/p sofa"
-"site:jysk.co.uk sofa"
-
-Use the web_search tool - this is MANDATORY.
-
-Gather as many product URLs as you can from the search results.
-Find as many DIFFERENT products as you can from these 2 retailers - different models, brands, sizes, colors within the budget.
+## Instructions
+1. Use the web_search tool - this is MANDATORY
+2. Search for product pages using queries like:
+   - "site:ikea.com/gb/en/p {user_pref.type} {additional_req_str} {user_pref.budget}"
+   - "site:jysk.co.uk {user_pref.type} {additional_req_str} {user_pref.budget}"
+3. Gather as many product URLs as you can from the search results
+4. Find DIFFERENT products from these retailers - it has to match the user preferences however!
+5. Ensure all products are within the budget of £{user_pref.budget}
 """
 
         try:

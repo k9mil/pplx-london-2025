@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useConversation } from "@elevenlabs/react";
 import { Orb, AgentState } from "@/components/ui/orb";
 import { ItemSelectionView } from "./ItemSelectionView";
@@ -7,7 +7,11 @@ import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ANIMATION, ERRORS, UI } from "@/constants";
 import { generalSearch } from "@/services/api";
-import type { ImageDescription, ProductResult } from "@/types";
+import type {
+  ImageDescription,
+  ProductResult,
+  ClientToolResult,
+} from "@/types";
 
 interface ProcessingViewProps {
   imageDescriptions?: ImageDescription[];
@@ -26,6 +30,8 @@ export function ProcessingView({
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [products, setProducts] = useState<ProductResult[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const clientToolResultRef = useRef<ClientToolResult | null>(null);
+  const productsAlreadyFetchedRef = useRef<boolean>(false);
 
   const conversation = useConversation({ micMuted });
   const { status, isSpeaking } = conversation;
@@ -59,7 +65,58 @@ export function ProcessingView({
         throw new Error("Missing VITE_ELEVENLABS_AGENT_ID");
       }
 
-      await conversation.startSession({ agentId } as any);
+      await conversation.startSession({
+        agentId,
+        clientTools: {
+          submit_furniture_search: async (parameters: any) => {
+            console.log("submit_furniture_search called with:", parameters);
+
+            const parseBudget = (budgetValue: any): number => {
+              if (typeof budgetValue === "number") {
+                return budgetValue;
+              }
+              if (typeof budgetValue === "string") {
+                const cleaned = budgetValue.replace(/[^0-9.]/g, "");
+                const parsed = parseFloat(cleaned);
+                return isNaN(parsed) ? 1500 : parsed;
+              }
+              return 1500;
+            };
+
+            clientToolResultRef.current = {
+              type: parameters.type || "sofa",
+              budget: parseBudget(parameters.budget || parameters.max_budget),
+              additional_requirements:
+                parameters.additional_requirements ||
+                parameters.requirements ||
+                "",
+            };
+
+            console.log(
+              "Stored client tool result:",
+              clientToolResultRef.current
+            );
+
+            setTimeout(async () => {
+              console.log(
+                "Tool called, waiting 3 seconds before ending conversation..."
+              );
+              try {
+                await conversation.endSession();
+                console.log("Conversation ended, triggering product fetch...");
+              } catch (error) {
+                console.error("Error ending session:", error);
+              }
+            }, 3000);
+
+            return {
+              success: true,
+              message:
+                "Perfect! I've saved your preferences and I'll search for products now. Let me find the best options for you.",
+            };
+          },
+        },
+      } as any);
 
       if (imageDescriptions.length > 0) {
         let contextMessage = "The user has uploaded the following images:\n\n";
@@ -69,7 +126,7 @@ export function ProcessingView({
           }\n\n`;
         });
         contextMessage +=
-          "Use this information to understand the user's preferences and needs.";
+          "Use this information to understand the user's preferences and needs. When you have gathered their preferences (type of item, budget, and any additional requirements), use the submit_furniture_search tool to save them.";
 
         conversation.sendContextualUpdate(contextMessage);
       }
@@ -94,29 +151,81 @@ export function ProcessingView({
   }, []);
 
   const fetchProducts = useCallback(async (): Promise<void> => {
+    if (productsAlreadyFetchedRef.current) {
+      console.log("Products already fetched, skipping duplicate call");
+      return;
+    }
+
+    const preferences = clientToolResultRef.current;
+
+    if (!preferences) {
+      console.log("No preferences captured from agent tool call");
+      setError("No search preferences provided. Please try again.");
+      return;
+    }
+
+    productsAlreadyFetchedRef.current = true;
     setIsLoadingProducts(true);
     try {
+      console.log("Fetching products with preferences:", preferences);
+
       const results = await generalSearch(
         {
-          budget_range: [500, 1500],
-          essential_features: [],
-          type: "sofa",
+          type: preferences.type,
+          budget: preferences.budget,
+          additional_requirements: preferences.additional_requirements,
         },
-        5
+        10
       );
-      setProducts(results);
+
+      console.log("Products fetched:", results);
+
+      const filteredProducts = results.filter(
+        (product) => product.price <= preferences.budget
+      );
+
+      console.log(
+        `Filtered products: ${filteredProducts.length} out of ${results.length} within budget of £${preferences.budget}`
+      );
+
+      if (filteredProducts.length === 0) {
+        console.warn("No products found within budget, showing all results");
+        setProducts(results.slice(0, 5));
+      } else {
+        setProducts(filteredProducts.slice(0, 5));
+      }
+
       setShowItemSelection(true);
     } catch (err) {
       console.error("Failed to fetch products:", err);
-      setError("Failed to load products. Please try again.");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load products";
+      setError(`${errorMessage}. Please try again.`);
     } finally {
       setIsLoadingProducts(false);
     }
   }, []);
 
   useEffect(() => {
-    if (status === UI.STATUS.DISCONNECTED && conversationStarted) {
-      fetchProducts();
+    const handleDisconnect = async () => {
+      if (!conversationStarted || !clientToolResultRef.current) return;
+
+      console.log(
+        "Conversation disconnected with preferences, waiting before fetching products..."
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      console.log("Fetching products now...");
+      await fetchProducts();
+    };
+
+    if (
+      status === UI.STATUS.DISCONNECTED &&
+      conversationStarted &&
+      clientToolResultRef.current
+    ) {
+      handleDisconnect();
     }
   }, [status, conversationStarted, fetchProducts]);
 
