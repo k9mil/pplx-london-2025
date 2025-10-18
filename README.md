@@ -83,7 +83,7 @@ python main.py
 # Runs on http://localhost:8000
 ```
 
-**FRONTEND:**
+**Frontend:**
 ```bash
 cd frontend
 npm i
