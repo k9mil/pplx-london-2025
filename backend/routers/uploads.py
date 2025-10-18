@@ -7,6 +7,7 @@ from typing import List
 from PIL import Image
 import io
 import time
+import base64
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel, Part
 
@@ -66,7 +67,7 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
             format_type = image.format
         except Exception as e:
             raise HTTPException(status_code=400, detail="Invalid image file")
-        
+
         # Upload to GCS if configured
         if settings.USE_GCS and gcs_storage:
             try:
@@ -122,10 +123,10 @@ async def upload_image(file: UploadFile = File(...)):
     try:
         # Validate image
         validate_image(file)
-        
+        print("validate image done")
         # Save file and get info
         file_info = await save_upload_file(file)
-        
+        print("file info 2 : ", file_info)
         return JSONResponse(
             status_code=200,
             content={
@@ -455,27 +456,46 @@ async def merge_images(
     """
     try:
         merger = ImageMerger()
-        
+
         if prompt:
             result = merger.merge_images(url1, url2, prompt)
         else:
             result = merger.merge_images(url1, url2)
-
+        '''
         for part in result.candidates[0].content.parts:
             if part.text is not None:
                 print(part.text)
             elif part.inline_data is not None:
-                file_extension = ".png"
                 timestamp = int(time.time())
+                mime_type = part.inline_data.mime_type or "image/png"
+                file_extension = ".png"
                 file_name = f"remixed_image_{timestamp}{file_extension}"
+                
+        '''
+        image_path = "../images_merger/" + merger.save_merged_image(result)
+        try:
+            file = open(image_path, "rb")
+            filename = image_path.split("/")[-1]
+            print("filename: ", filename)
+            upload_file = UploadFile(filename=filename, file=file)
+        except Exception as e:
+            print("error: ", e)
 
-                # Wrap bytes in UploadFile
-                file_like = io.BytesIO(part.inline_data.data)
-                upload_file = UploadFile(filename=file_name, file=file_like, content_type=part.inline_data.mime_type)
-
-                # Call your existing upload_image logic
-                file_info = await upload_image(file=upload_file)
-                uploaded_files_info = file_info.body  # Extract JSONResponse content
+        '''
+        # Wrap bytes in UploadFile
+        print("content type: ", part.inline_data.mime_type)
+        data = base64.b64decode(part.inline_data.data)
+        file_like = io.BytesIO(data)
+        try:
+            upload_file = UploadFile(filename=file_name, file=file_like)
+        except Exception as e:
+            print("error: ", e)
+        '''
+            
+        # Call your existing upload_image logic
+        file_info = await upload_image(upload_file)
+        print("file info: ", file_info.body)  
+        uploaded_files_info = file_info.body
 
         return JSONResponse(
             status_code=200,

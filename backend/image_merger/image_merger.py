@@ -81,7 +81,9 @@ class ImageMerger:
         except Exception as e:
             raise Exception(f"Error merging images: {str(e)}")
     
-    def save_merged_image(self, api_response, output_dir: str) -> bool:
+    def save_merged_image(self, api_response, output_dir: str="image_temp_folder/") -> bool:
+        
+        image_path = None
         for part in api_response.candidates[0].content.parts:
             if part.text is not None:
                 print(part.text)
@@ -92,7 +94,8 @@ class ImageMerger:
                     output_dir,
                     f"remixed_image_{timestamp}_{file_extension}",
                 )
-                self._save_binary_file(file_name, part.inline_data.data)
+                image_path = self._save_binary_file(file_name, part.inline_data.data)
+        return image_path
 
     def _get_mime_type(self, file_path: str) -> str:
         mime_type, _ = mimetypes.guess_type(file_path)
@@ -131,3 +134,5 @@ class ImageMerger:
         with open(file_name, "wb") as f:
             f.write(data)
         print(f"File saved to: {file_name}")
+        return file_name
+        
