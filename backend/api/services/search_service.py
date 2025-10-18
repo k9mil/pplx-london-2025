@@ -41,7 +41,10 @@ async def fetch_and_parse_product(
         print(f"   Site: {site_name}")
 
         try:
-            async with httpx.AsyncClient(timeout=120.0) as http_client:
+            async with httpx.AsyncClient(
+                timeout=60.0,
+                limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
+            ) as http_client:
                 headers = {"X-Target-Selector": css_selectors}
                 jina_response = await http_client.get(jina_url, headers=headers)
                 jina_content = jina_response.text
@@ -323,7 +326,7 @@ Find as many DIFFERENT individual products as you can from these 2 retailers - d
 
         async def fetch_all_products():
             try:
-                with ThreadPoolExecutor(max_workers=10) as executor:
+                with ThreadPoolExecutor(max_workers=50) as executor:
                     tasks = [
                         fetch_and_parse_product(
                             url, i, len(urls[:num_results]), client, executor
@@ -361,7 +364,7 @@ Find as many DIFFERENT individual products as you can from these 2 retailers - d
             raise
 
         print("\n" + "=" * 80)
-        print(f"STEP 3: Filtering products")
+        print("STEP 3: Filtering products")
         print("=" * 80 + "\n")
 
         # Filter out products with £0 price (indicates parsing failures or blog pages)
