@@ -254,8 +254,17 @@ export function ProcessingView({
   const isConnected = status === UI.STATUS.CONNECTED;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
-      <div className="flex flex-col items-center gap-6">
+    <div className="min-h-screen bg-white relative overflow-hidden flex flex-col items-center justify-center p-8">
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: "url('/gradient.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div className="relative z-10 flex flex-col items-center gap-6">
         <motion.div
           initial={{ filter: ANIMATION.BLUR.LARGE, opacity: 0 }}
           animate={{ filter: ANIMATION.BLUR.NONE, opacity: 1 }}

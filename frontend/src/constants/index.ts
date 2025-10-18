@@ -46,12 +46,12 @@ export const ERRORS = {
 } as const;
 
 export const FILE_UPLOAD = {
-  MAX_FILES: 5,
+  MAX_FILES: 1,
   MAX_SIZE_MB: 10,
   MAX_SIZE_BYTES: 10 * 1024 * 1024,
   ALLOWED_TYPES: ["image/"],
   MESSAGES: {
-    MAX_FILES_EXCEEDED: "You can only upload up to 5 files",
+    MAX_FILES_EXCEEDED: "You can only upload up to 1 file",
     INVALID_FILE_TYPE: "Only images are allowed",
     FILE_TOO_LARGE: (sizeMB: number) =>
       `File size must be less than ${sizeMB}MB`,
@@ -88,7 +88,7 @@ export const UI = {
     AGENT_CONVERSATION:
       "Now you are conversing with a real-time AI agent to understand your preferences, budget & other needs.",
     DRAG_DROP: "Drag & drop files here",
-    CLICK_BROWSE: "Or click to browse (max 5 files)",
+    CLICK_BROWSE: "Or click to browse (max 1 file)",
     UPLOADING: "Uploading...",
     UPLOAD_SUCCESS: "Upload successful!",
     UPLOAD_ERROR: "Upload failed. Please try again.",

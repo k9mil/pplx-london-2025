@@ -23,8 +23,17 @@ export function FinalProductView({
 }: FinalProductViewProps) {
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-8">
-        <div className="w-full max-w-6xl">
+      <div className="min-h-screen bg-white relative overflow-hidden flex items-center justify-center p-8">
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: "url('/gradient.svg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        <div className="relative z-10 w-full max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             <div className="flex justify-center">
               <Skeleton className="w-full max-w-lg h-96 rounded-lg" />
@@ -48,14 +57,34 @@ export function FinalProductView({
 
   if (!mergedImageUrl || !likedProduct) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-8">
-        <p className="text-muted-foreground">No product selected</p>
+      <div className="min-h-screen bg-white relative overflow-hidden flex items-center justify-center p-8">
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: "url('/gradient.svg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        <p className="relative z-10 text-muted-foreground">
+          No product selected
+        </p>
       </div>
     );
   }
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-8">
-      <div className="w-full max-w-6xl">
+    <div className="min-h-screen bg-white relative overflow-hidden flex items-center justify-center p-8">
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: "url('/gradient.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      <div className="relative z-10 w-full max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <motion.div
             initial={{ filter: ANIMATION.BLUR.EXTRA_LARGE, opacity: 0 }}
