@@ -21,10 +21,8 @@ from api.services.image_merger import ImageMerger
 
 router = APIRouter(prefix="/api", tags=["uploads"])
 
-# Initialize GCS storage client
 gcs_storage = get_storage_client()
 
-# Initialize Vertex AI
 vertex_ai_initialized = False
 if settings.VERTEX_AI_PROJECT:
     try:
@@ -148,10 +146,8 @@ async def upload_image(file: UploadFile = File(...)):
     Returns file information including path, size, and dimensions
     """
     try:
-        # Validate image
         validate_image(file)
         print("validate image done")
-        # Save file and get info
         file_info = await save_upload_file(file)
         print("file info 2 : ", file_info)
         return JSONResponse(
@@ -226,7 +222,6 @@ async def list_uploads(limit: int = 100):
                 "files": files,
             }
         else:
-            # List local files
             if not settings.UPLOAD_DIR.exists():
                 return {"success": True, "storage": "local", "count": 0, "files": []}
 
@@ -256,11 +251,9 @@ async def delete_upload(blob_name: str):
     """Delete an uploaded file from GCS or local storage"""
     try:
         if settings.USE_GCS and gcs_storage:
-            # Delete from GCS
             gcs_storage.delete_file(blob_name)
             return {"success": True, "message": f"File {blob_name} deleted from GCS"}
         else:
-            # Delete from local storage
             file_path = settings.UPLOAD_DIR / blob_name
 
             if not file_path.exists():
@@ -288,15 +281,8 @@ async def process_image(file: UploadFile = File(...)):
     for image analysis and product matching
     """
     try:
-        # Validate and save image
         validate_image(file)
         file_info = await save_upload_file(file)
-
-        # TODO: Add AI processing logic here
-        # - Image analysis
-        # - Object detection
-        # - Style extraction
-        # - Product matching
 
         return JSONResponse(
             status_code=200,
@@ -335,14 +321,12 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
     Returns a detailed text description of the image content.
     """
     try:
-        # Validate Vertex AI is configured
         if not vertex_ai_initialized:
             raise HTTPException(
                 status_code=503,
                 detail="Image-to-text service not configured. Vertex AI initialization failed.",
             )
 
-        # Validate request has either blob_name or image_url
         if not request.blob_name and not request.image_url:
             raise HTTPException(
                 status_code=400,
@@ -354,24 +338,20 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
         gcs_uri: Optional[str] = None
 
         if request.blob_name:
-            # Use GCS URI directly for better performance
             if not settings.USE_GCS or not gcs_storage:
                 raise HTTPException(
                     status_code=400,
                     detail="GCS storage not configured. Cannot retrieve image by blob_name.",
                 )
 
-            # Check if file exists
             if not gcs_storage.file_exists(request.blob_name):
                 raise HTTPException(
                     status_code=404,
                     detail=f"Image not found in bucket: {request.blob_name}",
                 )
 
-            # Build GCS URI
             gcs_uri = f"gs://{settings.GCS_BUCKET_NAME}/{request.blob_name}"
 
-            # Get image metadata
             blob = gcs_storage.bucket.blob(request.blob_name)
             blob.reload()
             image_info = {
@@ -382,7 +362,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
                 "created": blob.time_created.isoformat() if blob.time_created else None,
             }
         elif request.image_url:
-            # For external URLs, we'll need to download the image
             import requests
 
             response = requests.get(request.image_url, timeout=30)
@@ -394,7 +373,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
             image_data = response.content
             image_info = {"image_url": request.image_url}
 
-        # Prepare the prompt
         default_prompt = (
             "Please provide a detailed, comprehensive description of this image. "
             "Include information about: the main subjects or objects, their colors, "
@@ -415,7 +393,6 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
 
         final_prompt = request.prompt if request.prompt else default_prompt
 
-        # Initialize Gemini model
         model = GenerativeModel(settings.GEMINI_MODEL)
 
         if gcs_uri:

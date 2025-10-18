@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from perplexity import Perplexity
 from typing import List, Optional, Dict, Any
-from .models import UserPreference, ProductResult
+from api.models import UserPreference, ProductResult
 import re
 import httpx
 import asyncio
@@ -42,10 +42,8 @@ async def fetch_and_parse_product(
         try:
             async with httpx.AsyncClient(timeout=120.0) as http_client:
                 headers = {"X-Target-Selector": css_selectors}
-                # print(headers)
                 jina_response = await http_client.get(jina_url, headers=headers)
                 jina_content = jina_response.text
-                # print(jina_content)
 
             print(f"   ✅ Fetched {len(jina_content)} characters from Jina")
         except httpx.TimeoutException:
@@ -76,9 +74,9 @@ Image URL: [main product image URL if found]
         try:
             parse_response = client.chat.completions.create(
                 model="sonar",
-        messages=[
-            {
-                "role": "system",
+                messages=[
+                    {
+                        "role": "system",
                         "content": "You are a product information extractor. Extract structured data accurately.",
                     },
                     {"role": "user", "content": parse_prompt},
@@ -265,7 +263,7 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
                         if is_product_page(url):
                             urls.append(url)
                             print("       ✅ ACCEPTED")
-            else:
+                        else:
                             print("       ❌ REJECTED")
 
                 for result in search_results:
@@ -338,7 +336,7 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
         print(f"✅ Successfully parsed {len(products)} products")
         print("=" * 80 + "\n")
 
-    return products
+        return products
 
     except Exception:
         print("\n❌ FATAL ERROR in general_search:")
