@@ -23,7 +23,7 @@ _space_ streamlines the furtniture purchasing experience, by:
 
 ## 🏗️ Architecture
 
-![Deployment Diagram](public/PerplexHack%20Deployment%20Diagram.png)
+![Deployment Diagram](https://github.com/user-attachments/assets/8b1c7af0-a7c9-448b-99df-960d9aa23331)
 
 ## 💻 Tech Stack
 
