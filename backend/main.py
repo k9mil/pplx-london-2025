@@ -7,7 +7,7 @@ from part_2.models import (
     ProductResult,
     ProductRating,
     NarrowSearchRequest,
-    RefinedProduct
+    RefinedProduct,
 )
 from part_2.general_search import general_search
 from part_2.narrow_search import narrow_search
@@ -16,7 +16,7 @@ from part_2.full_response import get_full_response
 app = FastAPI(
     title="Furniture Research API",
     description="API for furniture buying research with AI-powered recommendations",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 
@@ -26,8 +26,8 @@ async def root():
         "message": "Furniture Research API",
         "endpoints": {
             "general_search": "/search/general",
-            "narrow_search": "/search/narrow"
-        }
+            "narrow_search": "/search/narrow",
+        },
     }
 
 
@@ -44,7 +44,7 @@ async def perform_general_search(user_pref: UserPreference, num_results: int = 1
         List of product results matching the criteria
     """
     try:
-        results = general_search(user_pref, num_results)
+        results = await general_search(user_pref, num_results)
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
@@ -85,7 +85,9 @@ async def debug_full_response(user_pref: UserPreference):
         response = get_full_response(user_pref)
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Full response request failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Full response request failed: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

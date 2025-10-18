@@ -6,7 +6,7 @@ from typing import List
 from .models import UserPreference, ProductRating, RefinedProduct
 
 # Load environment variables from .env file
-env_path = Path(__file__).parent.parent / '.env'
+env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # Get API key from environment
@@ -16,7 +16,9 @@ if not api_key:
     raise ValueError("PERPLEXITY_API_KEY not found in environment variables")
 
 
-def narrow_search(user_pref: UserPreference, product_ratings: List[ProductRating]) -> List[RefinedProduct]:
+def narrow_search(
+    user_pref: UserPreference, product_ratings: List[ProductRating]
+) -> List[RefinedProduct]:
     """
     Performs a refined furniture search based on user preferences and product ratings.
     Learns style preferences from rated products to find better matches.
@@ -37,13 +39,28 @@ def narrow_search(user_pref: UserPreference, product_ratings: List[ProductRating
     neutral_rated = [r for r in product_ratings if 5 < r.score < 8]
 
     # Build the search prompt
-    dimensions_str = ", ".join([f"{k}: {v} inches" for k, v in user_pref.dimensions.items()])
-    features_str = ", ".join(user_pref.essential_features) if user_pref.essential_features else "none specified"
+    features_str = (
+        ", ".join(user_pref.essential_features)
+        if user_pref.essential_features
+        else "none specified"
+    )
 
     # Build rating sections
-    high_rated_str = "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in high_rated]) if high_rated else "None"
-    low_rated_str = "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in low_rated]) if low_rated else "None"
-    neutral_rated_str = "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in neutral_rated]) if neutral_rated else "None"
+    high_rated_str = (
+        "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in high_rated])
+        if high_rated
+        else "None"
+    )
+    low_rated_str = (
+        "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in low_rated])
+        if low_rated
+        else "None"
+    )
+    neutral_rated_str = (
+        "\n".join([f"- {r.url} (Score: {r.score}/10)" for r in neutral_rated])
+        if neutral_rated
+        else "None"
+    )
 
     prompt = f"""
 I'm helping a user find the perfect {user_pref.type}. They provided basic requirements and
@@ -53,7 +70,6 @@ ratings and find better matches.
 FUNCTIONAL REQUIREMENTS (must maintain):
 - Type: {user_pref.type}
 - Budget: ${user_pref.budget_range[0]} - ${user_pref.budget_range[1]}
-- Dimensions: {dimensions_str}
 - Essential features: {features_str}
 
 STYLE LEARNING - Products they rated:
@@ -95,18 +111,15 @@ Format each product clearly with all fields labeled. Be highly selective - only 
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert interior designer and furniture consultant. Analyze user preferences deeply and provide highly targeted recommendations."
+                "content": "You are an expert interior designer and furniture consultant. Analyze user preferences deeply and provide highly targeted recommendations.",
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "user", "content": prompt},
         ],
         temperature=0.3,  # Slightly higher for creative style analysis
         extra_body={
             "return_images": True,
         },
-        search_recency_filter="month"  # Current inventory only
+        search_recency_filter="month",  # Current inventory only
     )
 
     # Get the response
@@ -114,17 +127,19 @@ Format each product clearly with all fields labeled. Be highly selective - only 
 
     # Extract images from the response if available
     images = []
-    if hasattr(completion, 'images') and completion.images:
+    if hasattr(completion, "images") and completion.images:
         # Images is a list of dicts with 'image_url' keys
-        images = [img.get('image_url') for img in completion.images if img.get('image_url')]
+        images = [
+            img.get("image_url") for img in completion.images if img.get("image_url")
+        ]
 
     # Extract citations and search_results for real URLs
     citations = []
-    if hasattr(completion, 'citations') and completion.citations:
+    if hasattr(completion, "citations") and completion.citations:
         citations = completion.citations
 
     search_results = []
-    if hasattr(completion, 'search_results') and completion.search_results:
+    if hasattr(completion, "search_results") and completion.search_results:
         search_results = completion.search_results
 
     # Parse the response into RefinedProduct objects
@@ -134,7 +149,12 @@ Format each product clearly with all fields labeled. Be highly selective - only 
     return products[:3]
 
 
-def parse_refined_response(response_text: str, images: List = None, citations: List = None, search_results: List = None) -> List[RefinedProduct]:
+def parse_refined_response(
+    response_text: str,
+    images: List = None,
+    citations: List = None,
+    search_results: List = None,
+) -> List[RefinedProduct]:
     """
     Parse Perplexity response into RefinedProduct objects.
 
@@ -151,14 +171,14 @@ def parse_refined_response(response_text: str, images: List = None, citations: L
     real_urls = []
     if search_results:
         for result in search_results:
-            if hasattr(result, 'url'):
+            if hasattr(result, "url"):
                 real_urls.append(result.url)
-            elif isinstance(result, dict) and 'url' in result:
-                real_urls.append(result['url'])
+            elif isinstance(result, dict) and "url" in result:
+                real_urls.append(result["url"])
     if citations:
         real_urls.extend(citations)
     products = []
-    lines = response_text.split('\n')
+    lines = response_text.split("\n")
     current_product = {}
 
     for line in lines:
@@ -167,76 +187,102 @@ def parse_refined_response(response_text: str, images: List = None, citations: L
             continue
 
         # Check if this is a new numbered item (1., 2., 3.)
-        if len(line) > 0 and line[0].isdigit() and '.' in line[:3]:
+        if len(line) > 0 and line[0].isdigit() and "." in line[:3]:
             # Save previous product if complete
-            if current_product and 'name' in current_product and 'url' in current_product:
+            if (
+                current_product
+                and "name" in current_product
+                and "url" in current_product
+            ):
                 # Set defaults for missing fields
-                current_product.setdefault('price', 0.0)
-                current_product.setdefault('image_url', None)
-                current_product.setdefault('functional_match', '')
-                current_product.setdefault('style_match', '')
-                current_product.setdefault('visual_characteristics', {})
+                current_product.setdefault("price", 0.0)
+                current_product.setdefault("image_url", None)
+                current_product.setdefault("functional_match", "")
+                current_product.setdefault("style_match", "")
+                current_product.setdefault("visual_characteristics", {})
                 products.append(RefinedProduct(**current_product))
             current_product = {}
 
         # Parse fields
         lower_line = line.lower()
 
-        if 'name:' in lower_line or 'product:' in lower_line:
-            current_product['name'] = line.split(':', 1)[1].strip()
-        elif 'url:' in lower_line or 'link:' in lower_line:
-            url_part = line.split(':', 1)[1].strip()
-            if '(' in url_part and ')' in url_part:
-                url_part = url_part[url_part.index('(')+1:url_part.index(')')]
-            current_product['url'] = url_part
-        elif 'price:' in lower_line or '$' in line:
-            price_str = line.replace('Price:', '').replace('price:', '').replace('$', '').replace(',', '').strip()
+        if "name:" in lower_line or "product:" in lower_line:
+            current_product["name"] = line.split(":", 1)[1].strip()
+        elif "url:" in lower_line or "link:" in lower_line:
+            url_part = line.split(":", 1)[1].strip()
+            if "(" in url_part and ")" in url_part:
+                url_part = url_part[url_part.index("(") + 1 : url_part.index(")")]
+            current_product["url"] = url_part
+        elif "price:" in lower_line or "$" in line:
+            price_str = (
+                line.replace("Price:", "")
+                .replace("price:", "")
+                .replace("$", "")
+                .replace(",", "")
+                .strip()
+            )
             try:
-                price_num = ''.join(filter(lambda x: x.isdigit() or x == '.', price_str.split()[0]))
-                current_product['price'] = float(price_num) if price_num else 0.0
+                price_num = "".join(
+                    filter(lambda x: x.isdigit() or x == ".", price_str.split()[0])
+                )
+                current_product["price"] = float(price_num) if price_num else 0.0
             except (ValueError, IndexError):
-                current_product['price'] = 0.0
-        elif 'image:' in lower_line or 'image url:' in lower_line:
-            img_url = line.split(':', 1)[1].strip()
-            if '(' in img_url and ')' in img_url:
-                img_url = img_url[img_url.index('(')+1:img_url.index(')')]
-            current_product['image_url'] = img_url
-        elif 'functional match:' in lower_line or 'matches functional' in lower_line:
-            current_product['functional_match'] = line.split(':', 1)[1].strip()
-        elif 'style match:' in lower_line or 'matches style' in lower_line or 'style preference' in lower_line:
-            current_product['style_match'] = line.split(':', 1)[1].strip()
-        elif 'visual characteristics:' in lower_line or 'characteristics:' in lower_line:
+                current_product["price"] = 0.0
+        elif "image:" in lower_line or "image url:" in lower_line:
+            img_url = line.split(":", 1)[1].strip()
+            if "(" in img_url and ")" in img_url:
+                img_url = img_url[img_url.index("(") + 1 : img_url.index(")")]
+            current_product["image_url"] = img_url
+        elif "functional match:" in lower_line or "matches functional" in lower_line:
+            current_product["functional_match"] = line.split(":", 1)[1].strip()
+        elif (
+            "style match:" in lower_line
+            or "matches style" in lower_line
+            or "style preference" in lower_line
+        ):
+            current_product["style_match"] = line.split(":", 1)[1].strip()
+        elif (
+            "visual characteristics:" in lower_line or "characteristics:" in lower_line
+        ):
             # Try to parse as dict
-            char_str = line.split(':', 1)[1].strip()
+            char_str = line.split(":", 1)[1].strip()
             # Simple parsing - look for color, material, style
             chars = {}
-            if 'color' in char_str.lower():
-                chars['color'] = 'extracted from text'  # Simplified
-            if 'material' in char_str.lower():
-                chars['material'] = 'extracted from text'
-            if 'style' in char_str.lower():
-                chars['style'] = 'extracted from text'
-            current_product['visual_characteristics'] = chars if chars else {'raw': char_str}
-        elif 'color:' in lower_line:
-            if 'visual_characteristics' not in current_product:
-                current_product['visual_characteristics'] = {}
-            current_product['visual_characteristics']['color'] = line.split(':', 1)[1].strip()
-        elif 'material:' in lower_line:
-            if 'visual_characteristics' not in current_product:
-                current_product['visual_characteristics'] = {}
-            current_product['visual_characteristics']['material'] = line.split(':', 1)[1].strip()
-        elif 'style:' in lower_line and 'style match' not in lower_line:
-            if 'visual_characteristics' not in current_product:
-                current_product['visual_characteristics'] = {}
-            current_product['visual_characteristics']['style'] = line.split(':', 1)[1].strip()
+            if "color" in char_str.lower():
+                chars["color"] = "extracted from text"  # Simplified
+            if "material" in char_str.lower():
+                chars["material"] = "extracted from text"
+            if "style" in char_str.lower():
+                chars["style"] = "extracted from text"
+            current_product["visual_characteristics"] = (
+                chars if chars else {"raw": char_str}
+            )
+        elif "color:" in lower_line:
+            if "visual_characteristics" not in current_product:
+                current_product["visual_characteristics"] = {}
+            current_product["visual_characteristics"]["color"] = line.split(":", 1)[
+                1
+            ].strip()
+        elif "material:" in lower_line:
+            if "visual_characteristics" not in current_product:
+                current_product["visual_characteristics"] = {}
+            current_product["visual_characteristics"]["material"] = line.split(":", 1)[
+                1
+            ].strip()
+        elif "style:" in lower_line and "style match" not in lower_line:
+            if "visual_characteristics" not in current_product:
+                current_product["visual_characteristics"] = {}
+            current_product["visual_characteristics"]["style"] = line.split(":", 1)[
+                1
+            ].strip()
 
     # Add last product if valid
-    if current_product and 'name' in current_product and 'url' in current_product:
-        current_product.setdefault('price', 0.0)
-        current_product.setdefault('image_url', None)
-        current_product.setdefault('functional_match', '')
-        current_product.setdefault('style_match', '')
-        current_product.setdefault('visual_characteristics', {})
+    if current_product and "name" in current_product and "url" in current_product:
+        current_product.setdefault("price", 0.0)
+        current_product.setdefault("image_url", None)
+        current_product.setdefault("functional_match", "")
+        current_product.setdefault("style_match", "")
+        current_product.setdefault("visual_characteristics", {})
         products.append(RefinedProduct(**current_product))
 
     # Replace hallucinated URLs with real ones from search results
@@ -255,14 +301,16 @@ def parse_refined_response(response_text: str, images: List = None, citations: L
 
     # If parsing failed, return debug info
     if not products:
-        products.append(RefinedProduct(
-            name="Parsing Error - Check Response",
-            url="",
-            price=0.0,
-            image_url=None,
-            functional_match="",
-            style_match="",
-            visual_characteristics={'debug': response_text[:300]}
-        ))
+        products.append(
+            RefinedProduct(
+                name="Parsing Error - Check Response",
+                url="",
+                price=0.0,
+                image_url=None,
+                functional_match="",
+                style_match="",
+                visual_characteristics={"debug": response_text[:300]},
+            )
+        )
 
     return products
