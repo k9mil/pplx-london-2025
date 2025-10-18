@@ -24,6 +24,10 @@ _space_ streamlines the furtniture purchasing experience, by:
 - Doing a wide scan of the net with the help of Perplexity to scan for URLs of our products
 - Extracting data of the products via the use of Jina AI
 
+## 🏗️ Architecture
+
+![Deployment Diagram](public/PerplexHack%20Deployment%20Diagram.png)
+
 ## 💻 Tech Stack
 
 - [Perplexity](https://www.perplexity.ai/) – searching the web
