@@ -120,7 +120,7 @@ Image URL: [main product image URL if found]
 
 
 async def general_search(
-    user_pref: UserPreference, num_results: int = 5
+    user_pref: UserPreference, num_results: int = 400
 ) -> List[ProductResult]:
     try:
         print("\n" + "=" * 80)
@@ -134,19 +134,22 @@ async def general_search(
         )
 
         search_prompt = f"""
-Search for many different {user_pref.type} product pages from IKEA UK and JYSK UK. I need at least {num_results} individual products total.
+Search for individual {user_pref.type} product pages from IKEA UK and JYSK UK. I need at least {num_results} individual products total.
 
 Budget: £{user_pref.budget_range[0]}-£{user_pref.budget_range[1]}
 Features: {features_str}
 
+IMPORTANT: I need individual PRODUCT pages, not category pages. Look for:
+- IKEA URLs that contain "/p/" (individual product pages)
+- JYSK URLs that are individual product pages
+
 Search for things like:
-"site:ikea.com/gb/en/p sofa"
-"site:jysk.co.uk sofa"
+"site:ikea.com/gb/en/p {user_pref.type}"
+"site:jysk.co.uk {user_pref.type}"
 
 Use the web_search tool - this is MANDATORY.
 
-Gather as many product URLs as you can from the search results.
-Find as many DIFFERENT products as you can from these 2 retailers - different models, brands, sizes, colors within the budget.
+Find as many DIFFERENT individual products as you can from these 2 retailers - different models, brands, sizes, colors within the budget.
 """
 
         try:
@@ -166,7 +169,7 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
                 ],
                 temperature=0.1,
                 stream=True,
-                web_search_options={"search_type": "pro"},
+                web_search_options={"search_type": "pro", "max_results": 20},
             )
 
             print("📡 Processing streaming response...")
@@ -239,10 +242,11 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
                     return True
 
                 if "jysk.co.uk" in url_lower:
+                    # JYSK product URLs typically have product names in the path
                     path_parts = url.split("/")
-                    if len(path_parts) >= 5:
+                    if len(path_parts) >= 4:  # More lenient - was 5
                         last_part = path_parts[-1] if path_parts[-1] else path_parts[-2]
-                        if last_part and len(last_part) > 15 and "-" in last_part:
+                        if last_part and len(last_part) > 10 and ("-" in last_part or any(char.isdigit() for char in last_part)):
                             return True
 
                 return False
@@ -343,15 +347,82 @@ Find as many DIFFERENT products as you can from these 2 retailers - different mo
             raise
 
         print("\n" + "=" * 80)
-        print(f"✅ Successfully parsed {len(products)} products")
+        print(f"STEP 3: Filtering products")
         print("=" * 80 + "\n")
 
-        return products
+        # Filter out products with £0 price (indicates parsing failures or blog pages)
+        valid_products = [p for p in products if p.price > 0]
+        filtered_count = len(products) - len(valid_products)
+
+        if filtered_count > 0:
+            print(f"🗑️  Filtered out {filtered_count} product(s) with £0 price (likely blog/non-product pages)")
+
+        # Filter products that don't match the requested type
+        print(f"\n📋 Validating products match requested type: '{user_pref.type}'")
+        type_matched_products = [
+            p for p in valid_products
+            if matches_product_type(p, user_pref.type)
+        ]
+        type_filtered = len(valid_products) - len(type_matched_products)
+
+        if type_filtered > 0:
+            print(f"🗑️  Filtered out {type_filtered} product(s) not matching type '{user_pref.type}':")
+            for p in valid_products:
+                if not matches_product_type(p, user_pref.type):
+                    print(f"     ❌ {p.name} (not a {user_pref.type})")
+
+        print("\n" + "=" * 80)
+        print(f"✅ Successfully parsed {len(type_matched_products)} valid {user_pref.type} products (from {len(products)} total)")
+        print("=" * 80 + "\n")
+
+        return type_matched_products
 
     except Exception:
         print("\n❌ FATAL ERROR in general_search:")
         traceback.print_exc()
         raise
+
+
+def matches_product_type(product: ProductResult, requested_type: str) -> bool:
+    """
+    Check if product name/description matches requested product type.
+    Helps filter out irrelevant products (e.g., rugs when searching for sofas).
+
+    Args:
+        product: The ProductResult to check
+        requested_type: The product type that was requested (e.g., 'sofa', 'desk')
+
+    Returns:
+        True if product matches the requested type, False otherwise
+    """
+    requested_lower = requested_type.lower()
+    name_lower = product.name.lower()
+    desc_lower = product.description.lower() if product.description else ""
+
+    # Check if product type appears in name or description
+    if requested_lower in name_lower or requested_lower in desc_lower:
+        return True
+
+    # Handle common variations and synonyms
+    type_variations = {
+        'sofa': ['sofa', 'couch', 'settee', 'loveseat', 'sectional'],
+        'desk': ['desk', 'workstation', 'writing table'],
+        'chair': ['chair', 'seat', 'armchair'],
+        'table': ['table', 'dining table', 'coffee table'],
+        'bed': ['bed', 'bedframe', 'bed frame'],
+        'wardrobe': ['wardrobe', 'closet', 'armoire'],
+        'shelf': ['shelf', 'shelving', 'bookcase', 'bookshelf'],
+        'cabinet': ['cabinet', 'cupboard', 'storage unit'],
+        'rug': ['rug', 'carpet', 'mat'],
+        'lamp': ['lamp', 'light', 'lighting'],
+    }
+
+    if requested_lower in type_variations:
+        variations = type_variations[requested_lower]
+        if any(var in name_lower or var in desc_lower for var in variations):
+            return True
+
+    return False
 
 
 def extract_urls(text: str) -> List[str]:
