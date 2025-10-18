@@ -26,10 +26,10 @@ async def fetch_and_parse_product(
         print("   Fetching via Jina Reader...")
 
         url_lower = url.lower()
-        if "ikea.com" in url_lower:
+        if "ikea" in url_lower:
             css_selectors = ".pip-price-module__primary-currency-price, .pip-product-gallery__right-section-wrapper, .pip-product-summary__description"
             site_name = "IKEA"
-        elif "jysk.co.uk" in url_lower:
+        elif "jysk" in url_lower:
             css_selectors = (
                 ".product-sumbox-series, .ssr-product-price__value, .img-responsive"
             )
