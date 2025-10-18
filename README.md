@@ -35,6 +35,10 @@ _space_ streamlines the furtniture purchasing experience, by:
 - [JinaAI](https://jina.ai/) – product extraction
 - [shadcn/ui](https://ui.shadcn.com/) – the standard for components
 
+## How the Perplexity API was Integrated?
+
+We leverage Perplexity's Sonar Pro model with web search capabilities to discover furniture products across multiple UK retailers. The system uses targeted search queries with site-specific filters to find individual product pages, then employs Jina AI Reader to extract clean, structured content from retailer websites using custom CSS selectors. Perplexity's Sonar model then parses this content to extract structured product data (name, price, description, images). Advanced URL filtering ensures only valid product pages are processed, while intelligent parsing handles different retailer page structures. This creates a unified search experience that aggregates real-time product information from multiple sources with high accuracy and comprehensive coverage.
+
 ## 🚀 Running the Project
 
 ### Quick Start (Frontend Only)
