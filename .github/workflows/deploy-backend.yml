@@ -3,7 +3,7 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches:
-      - main
+      - emma-dev
     paths:
       - 'backend/**'
       - '.github/workflows/deploy-backend.yml'
