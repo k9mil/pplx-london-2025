@@ -8,17 +8,9 @@ import requests
 
 
 class ImageMerger:
-    """Class for merging images using Gemini API."""
-
     MODEL = "gemini-2.5-flash-image"
 
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize the ImageMerger with Gemini API key.
-
-        Args:
-            api_key (str): Gemini API key
-        """
         if api_key is None:
             api_key = os.getenv("GEMINI_API_KEY")
 
@@ -32,17 +24,6 @@ class ImageMerger:
     def merge_images(
         self, image1_url: str, image2_url: str, prompt: Optional[str] = None
     ):
-        """
-        Merge two images using Gemini API with a given prompt.
-
-        Args:
-            image1_url (str): URL of the first image
-            image2_url (str): URL of the second image
-            prompt (str): Text prompt describing how to merge the images
-
-        Returns:
-            Dict[str, Any]: API response containing the merged image
-        """
         contents = []
         image_urls = [image1_url, image2_url]
 
@@ -111,16 +92,6 @@ class ImageMerger:
         return mime_type
 
     def _get_mime_type_from_url(self, url: str, headers: Optional[dict] = None) -> str:
-        """
-        Determine MIME type from URL or response headers.
-
-        Args:
-            url (str): Image URL
-            headers (dict): HTTP response headers
-
-        Returns:
-            str: MIME type
-        """
         if headers and "content-type" in headers:
             content_type = headers["content-type"]
             mime_type = content_type.split(";")[0].strip()

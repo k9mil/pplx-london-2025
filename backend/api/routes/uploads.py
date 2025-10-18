@@ -1,7 +1,3 @@
-"""
-Upload endpoints for handling image uploads
-"""
-
 from fastapi import APIRouter, File, UploadFile, HTTPException, Body
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
@@ -49,7 +45,6 @@ if settings.VERTEX_AI_PROJECT:
 
 
 def validate_image(file: UploadFile) -> None:
-    """Validate uploaded image file"""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
 
@@ -62,7 +57,6 @@ def validate_image(file: UploadFile) -> None:
 
 
 async def save_upload_file(upload_file: UploadFile) -> dict:
-    """Save uploaded file to GCS or local storage and return file info"""
     try:
         if not upload_file.filename:
             raise HTTPException(status_code=400, detail="Filename is required")
@@ -138,13 +132,6 @@ async def save_upload_file(upload_file: UploadFile) -> dict:
 
 @router.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
-    """
-    Upload a single image file
-
-    - **file**: Image file (jpg, jpeg, png, gif, webp)
-
-    Returns file information including path, size, and dimensions
-    """
     try:
         validate_image(file)
         print("validate image done")
@@ -172,13 +159,6 @@ async def upload_image(file: UploadFile = File(...)):
 
 @router.post("/upload/multiple")
 async def upload_multiple_images(files: List[UploadFile] = File(...)):
-    """
-    Upload multiple image files
-
-    - **files**: List of image files (jpg, jpeg, png, gif, webp)
-
-    Returns information for all uploaded files
-    """
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
@@ -211,7 +191,6 @@ async def upload_multiple_images(files: List[UploadFile] = File(...)):
 
 @router.get("/uploads")
 async def list_uploads(limit: int = 100):
-    """List uploaded files"""
     try:
         if settings.USE_GCS and gcs_storage:
             files = gcs_storage.list_files(max_results=limit)
@@ -248,7 +227,6 @@ async def list_uploads(limit: int = 100):
 
 @router.delete("/uploads/{blob_name:path}")
 async def delete_upload(blob_name: str):
-    """Delete an uploaded file from GCS or local storage"""
     try:
         if settings.USE_GCS and gcs_storage:
             gcs_storage.delete_file(blob_name)
@@ -258,8 +236,6 @@ async def delete_upload(blob_name: str):
 
             if not file_path.exists():
                 raise HTTPException(status_code=404, detail="File not found")
-
-            import os
 
             os.remove(file_path)
             return {
@@ -274,12 +250,6 @@ async def delete_upload(blob_name: str):
 
 @router.post("/process")
 async def process_image(file: UploadFile = File(...)):
-    """
-    Process uploaded image and extract information
-
-    This endpoint will be extended to integrate with AI services
-    for image analysis and product matching
-    """
     try:
         validate_image(file)
         file_info = await save_upload_file(file)
@@ -307,19 +277,6 @@ async def process_image(file: UploadFile = File(...)):
 
 @router.post("/image-to-text", response_model=ImageToTextResponse)
 async def image_to_text(request: ImageToTextRequest = Body(...)):
-    """
-    Convert an image to detailed text description using Google's Gemini Vision model.
-
-    This endpoint is designed for integration with ElevenLabs agent or other
-    services that need text descriptions of images instead of direct image URLs.
-
-    - **blob_name**: GCS blob path (e.g., "uploads/20241017_123456_image.jpg")
-    - **image_url**: Public URL of the image (alternative to blob_name)
-    - **prompt**: Optional custom prompt for specific description requirements
-    - **detail_level**: low, medium, or high (default: high)
-
-    Returns a detailed text description of the image content.
-    """
     try:
         if not vertex_ai_initialized:
             raise HTTPException(
@@ -404,7 +361,7 @@ async def image_to_text(request: ImageToTextRequest = Body(...)):
 
         response = model.generate_content([final_prompt, image_part], stream=False)
 
-        description = response.text if hasattr(response, "text") else str(response)  # type: ignore
+        description = response.text if hasattr(response, "text") else str(response)
 
         return JSONResponse(
             status_code=200,
@@ -432,15 +389,6 @@ async def merge_images(
         None, embed=True, description="Optional prompt for image merging"
     ),
 ):
-    """
-    Merge two images using backend logic.
-
-    - **url1**: URL of the first image
-    - **url2**: URL of the second image
-    - **prompt**: Optional prompt for guiding the merge
-
-    Returns the result from the backend image merge.
-    """
     try:
         merger = ImageMerger()
         result = merger.merge_images(url1, url2, prompt)
