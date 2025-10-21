@@ -1,6 +1,8 @@
-# space
+# 🛰️ space
 
-We found purchasing furniture & home accesories tedious; which is why we built space with the help of Perplexity. The space product allows us to speak via natural language to an ElevenLabs agent which guides us through the tedious process of buying furniture & showcasing how it would look like in our room.
+![space product](https://github.com/user-attachments/assets/fec26c88-f1d6-4b4d-84ef-f3059473280f)
+
+We found purchasing furniture & home accessories tedious; which is why we built space with the help of Perplexity. The space product allows us to speak via natural language to an ElevenLabs agent which guides us through the tedious process of buying furniture & showcasing how it would look in our room.
 
 In our personal experience we found that:
 
@@ -9,14 +11,12 @@ In our personal experience we found that:
 
 Which is why we built space. Traditional image generation tools can generate images of a given space and modify the product, but the products it generates don't exist in the real world. We solved this problem.
 
-![space Product](https://github.com/user-attachments/assets/813acdc2-2c01-4ce4-b969-53fe1a209e93)
-
 ## 🎯 Project Overview
 
-_space_ streamlines the furtniture purchasing experience, by:
+_space_ streamlines the furniture purchasing experience, by:
 
 - Gathering images from the users' room of choice
-- Conduct intelligent consultations with users through natural language
+- Conducting intelligent consultations with users through natural language
 - Extracting requirements from the user of their preferences
 - Doing a wide scan of the net with the help of Perplexity to scan for URLs of our products
 - Extracting data of the products via the use of Jina AI
@@ -34,9 +34,9 @@ _space_ streamlines the furtniture purchasing experience, by:
 - [TypeScript](https://www.typescriptlang.org/) – frontend language
 - [React](https://react.dev/) – frontend framework
 - [JinaAI](https://jina.ai/) – product extraction
-- [shadcn/ui](https://ui.shadcn.com/) – the standard for components
+- [shadcn/ui](https://ui.shadcn.com/) – components
 
-## How the Perplexity API was Integrated?
+## How was the Perplexity API integrated?
 
 We leverage Perplexity's Sonar Pro model with web search capabilities to discover furniture products across multiple UK retailers. The system uses targeted search queries with site-specific filters to find individual product pages, then employs Jina AI Reader to extract clean, structured content from retailer websites using custom CSS selectors. Perplexity's Sonar model then parses this content to extract structured product data (name, price, description, images). Advanced URL filtering ensures only valid product pages are processed, while intelligent parsing handles different retailer page structures. This creates a unified search experience that aggregates real-time product information from multiple sources with high accuracy and comprehensive coverage.
 
@@ -50,7 +50,6 @@ The backend is deployed on Cloud Run, so you only need to run the frontend local
 cd frontend
 npm install
 npm run dev
-# Runs on http://localhost:5173
 ```
 
 Visit `http://localhost:5173` to use the app.
@@ -64,10 +63,7 @@ Only needed if you're developing backend features.
 Create a `.env` file in the `backend` directory:
 
 ```bash
-# Required
 PERPLEXITY_API_KEY=your-perplexity-key
-
-# Optional (for Google Cloud features)
 GCS_BUCKET_NAME=your-bucket-name
 GCP_PROJECT_ID=your-project-id
 GCS_CREDENTIALS_PATH=path/to/service-account-key.json
@@ -76,18 +72,21 @@ GCS_CREDENTIALS_PATH=path/to/service-account-key.json
 **Backend:**
 ```bash
 cd backend
+
 python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
+
 python main.py
-# Runs on http://localhost:8000
 ```
 
 **Frontend:**
 ```bash
 cd frontend
+
+export VITE_ELEVENLABS_AGENT_ID=your-agent-id
+
 npm i
-VITE_ELEVENLABS_AGENT_ID=your-agent-id
 npm run dev
 ```
 
